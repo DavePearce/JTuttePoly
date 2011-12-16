@@ -353,4 +353,25 @@ public class SpanningGraph {
 //		StringBuilder ss = new StringBuilder();
 		return graph.toString();
 	}
+	
+	public boolean equals(Object o){
+		if( o instanceof SpanningGraph ){
+			return this.equals((SpanningGraph)o);
+		}
+		return false;
+	}
+	public boolean equals(SpanningGraph g){
+		if(g.domain_size() != this.domain_size()){
+			return false;
+		}
+		if(g.numEdges() != this.numEdges()){
+			return false;
+		}
+		if(g.num_vertices() != this.num_vertices()){
+			return false;
+		}
+		
+		return true;
+		
+	}
 }
