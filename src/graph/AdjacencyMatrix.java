@@ -17,7 +17,8 @@ public class AdjacencyMatrix {
 	private int startVertex;
 
 	/**
-	 * Make a new Adjacency matrix with a given number of vertices. All vertices MUST have edges added to them during construction
+	 * Make a new Adjacency matrix with a given number of vertices. All vertices
+	 * MUST have edges added to them during construction
 	 * 
 	 * @param n
 	 *            The number of vertices
@@ -39,7 +40,8 @@ public class AdjacencyMatrix {
 	}
 
 	/**
-	 * Deep clone an existing AdjacencyMatrix. The two are independent and identical
+	 * Deep clone an existing AdjacencyMatrix. The two are independent and
+	 * identical
 	 * 
 	 * @param g
 	 *            The AdjacencyMatrix to clone
@@ -145,7 +147,8 @@ public class AdjacencyMatrix {
 	}
 
 	/**
-	 * Return the number of vertices that this vertex is connected to. This is the same as the degree except that multiedges are only counted as 1
+	 * Return the number of vertices that this vertex is connected to. This is
+	 * the same as the degree except that multiedges are only counted as 1
 	 * rather than their actual number
 	 * 
 	 * @param vertex
@@ -159,6 +162,15 @@ public class AdjacencyMatrix {
 		return count;
 	}
 
+	/**
+	 * Returns the number of edges between from and to
+	 * 
+	 * @param from
+	 *            The source vertex
+	 * @param to
+	 *            Destination vertex
+	 * @return number of edges between them
+	 */
 	public int numEdges(int from, int to) {
 		long startBit = domainSize * CELL_SIZE * from + CELL_SIZE * to;
 		int startInt = (int) (startBit / 32);
@@ -167,11 +179,7 @@ public class AdjacencyMatrix {
 		if (overflow) {
 			long v = edges[startInt] | edges[startInt + 1] << 32;
 			int mask = 0;
-			int m = 1;
-			for (int i = 0; i < CELL_SIZE; i++) {
-				mask |= m;
-				m <<= 1;
-			}
+			int m = (1 << CELL_SIZE) - 1;
 			long ret = v & (mask << index);
 			ret >>= index;
 			ret &= m;
@@ -179,11 +187,7 @@ public class AdjacencyMatrix {
 		} else {
 			int v = edges[startInt];
 			int mask = 0;
-			int m = 1;
-			for (int i = 0; i < CELL_SIZE; i++) {
-				mask |= m;
-				m <<= 1;
-			}
+			int m = (1 << CELL_SIZE) - 1;
 			int ret = v & (mask << index);
 			ret >>= index;
 			ret &= m;
@@ -200,7 +204,8 @@ public class AdjacencyMatrix {
 	}
 
 	/**
-	 * Remove a vertex. This vertex is now guaranteed to have no edges to or from it
+	 * Remove a vertex. This vertex is now guaranteed to have no edges to or
+	 * from it It is also removed from the list of vertices
 	 * 
 	 * @param v
 	 *            The vertex to clear
@@ -224,7 +229,8 @@ public class AdjacencyMatrix {
 		vertices[v] = -1;
 
 		// Now, clear all edges involving v
-		// first the row
+		// first the row This is done long ways as this might be faster as it
+		// can write an int at a time
 		long startBit = domainSize * CELL_SIZE * v;
 		long endBit = domainSize * CELL_SIZE * v + 1;
 
@@ -236,69 +242,75 @@ public class AdjacencyMatrix {
 		if (startInt == endInt) {
 			// If the whole row is contain within the current int
 			int m = 0xFFFFFFFE << (domainSize * CELL_SIZE);
-			for (int i = 0; i < startIndex; i++) {
-				m <<= 1;
-				m |= 1;
-			}
+			m |= (1 << startIndex) - 1;
 			vertices[startInt] &= m;
 		} else {
 			// clear the starting int
 			if (startIndex != 0) {
 				// Need to only clear the END of the starting int
-				int m = 0;
-				// ADD 1's until the start index
-				for (int i = 0; i < startIndex; i++) {
-					m <<= 1;
-					m |= 1;
-				}
+				int m = (1 << startIndex) - 1;
 				vertices[startInt] &= m;
 				startInt++;
 			}
 			while (startInt < endInt) {
 				vertices[startInt++] = 0;
 			}
-			//Clear as much of the last index as needed
+			// Clear as much of the last index as needed
 			int m = 0xFFFFFFFF << endIndex;
 			vertices[endInt] &= m;
 
 		}
 
-		// Now delete the column
+		// Now delete the columns
+		for (int i = 0; i < domainSize; i++) {
+			setValue(i, v, 0);
+		}
 	}
 
-	public void remove(int v) {
-		clear(v);
+	private void setValue(int from, int to, int val) {
+		long startBit = domainSize * CELL_SIZE * from + CELL_SIZE * to;
+
+		int startInt = (int) (startBit / 32);
+		int startIndex = (int) (startBit % 32);
+
+		boolean overflow = startIndex + CELL_SIZE < 32;
+		if (overflow) {
+			int maskFirst = (1 << startIndex) - 1;
+			int leftOver = CELL_SIZE - 32 + startIndex;
+			int maskSecond = 0xFFFFFFFF ^ ((1 << leftOver) - 1);
+
+			vertices[startInt] &= maskFirst;
+			vertices[startInt + 1] &= maskSecond;
+		} else {
+			int mask = 0xFFFFFFFF ^ (((1 << (CELL_SIZE)) - 1) << startIndex);
+			vertices[startInt] &= mask;
+		}
 	}
 
+	/**
+	 * Add c many of an edge from from to to
+	 * 
+	 * @param from
+	 * @param to
+	 * @param c
+	 * @return True if the edge already exists
+	 */
 	public boolean addEdge(int from, int to, int c) {
 		numEdges += c;
 
-		// the following is a hack to check
-		// whether the edge we're inserting
-		// is already in the graph or not
-		Map<Integer, Integer> tos = edges.get(to);
-		Integer i = tos.get(from);
-		if (i != null) {
-			// edge already present so another multi-edge!
-			numMultiEdges += c;
-			tos.put(from, i + c);
-			// don't want to increment same edge twice!
-			if (from != to) {
-				tos = edges.get(from);
-				i = edges.get(from).get(to);
-				tos.put(to, i + c);
-			}
-			return true;
+		int num = this.numEdges(from, to);
+		if (num == 0) {
+			numMultiEdges += c - 1;
 		} else {
-			// completely new edge!
-			numMultiEdges += (c - 1);
-			tos.put(from, c);
-			// self-loops only get one mention in the edge set
-			if (from != to) {
-				edges.get(from).put(to, c);
-			}
-			return false;
+			numMultiEdges += c;
 		}
+
+		c += num;
+
+		setValue(from, to, c);
+		setValue(to, from, c);
+
+		return num != 0;
 	}
 
 	/**
@@ -315,44 +327,40 @@ public class AdjacencyMatrix {
 	}
 
 	public boolean removeEdge(int from, int to, int c) {
-		Map<Integer, Integer> fset = edges.get(from); // optimisation
-		Integer i = fset.get(to);
-		if (i != null) {
-			if (i > c) {
-				// this is a multi-edge, so decrement count.
-				numMultiEdges -= c;
-				numEdges -= c;
-				fset.put(to, i - c);
-				if (from != to) {
-					i = edges.get(to).get(from);
-					edges.get(to).put(from, i - c);
-				}
-			} else {
-				// clear our ALL edges
-				numEdges -= i;
-				numMultiEdges -= (i - 1);
-				fset.remove(to);
-				if (from != to) {
-					edges.get(to).remove(from);
-				}
-			}
-			return true;
+
+		int i = numEdges(from, to);
+		if (i == 0) {
+			return false;
 		}
-		return false;
+		if (i > c) {
+			// this is a multi-edge, so decrement count.
+			numMultiEdges -= c;
+			numEdges -= c;
+			setValue(from, to, i - c);
+			if (from != to) {
+				setValue(to, from, i - c);
+			}
+		} else {
+			// set to zero
+			numEdges -= i;
+			numMultiEdges -= (i - 1);
+			setValue(from, to, 0);
+			if (from != to) {
+				setValue(to, from, 0);
+			}
+		}
+		return true;
 	}
 
 	public int removeAllEdges(int from, int to) {
 		// remove all edges "from--to"
-		int r = 0;
-		Map<Integer, Integer> fset = edges.get(from); // optimisation
-		Integer i = fset.get(to);
-		if (i != null) {
-			r = i;
+		int r = numEdges(from, to);
+		if (r != 0) {
 			numEdges -= r;
 			numMultiEdges -= (r - 1);
-			fset.remove(to);
+			setValue(from, to, 0);
 			if (from != to) {
-				edges.get(to).remove(from);
+				setValue(to,from,0);
 			}
 		}
 
@@ -372,14 +380,14 @@ public class AdjacencyMatrix {
 		return removeEdge(from, to, 1);
 	}
 
-	public void remove(AdjacencyList g) {
+	public void remove(AdjacencyMatrix g) {
 		boolean done = false;
-		for (Integer i : g.vertices) {
+		for (int i : g.vertices()) {
 			done = false;
 			out: while (!done) {
-				for (Map.Entry<Integer, Integer> j : g.edges.get(i).entrySet()) {
-					if (i >= j.getKey()) {
-						if (removeEdge(i, j.getKey(), j.getValue())) {
+				for (Pair<Integer, Integer> j : g.edges(i)) {
+					if (i >= j.first()) {
+						if (removeEdge(i, j.first(), j.second())) {
 							continue out;
 						}
 					}
@@ -397,15 +405,15 @@ public class AdjacencyMatrix {
 		if (from == to) {
 			throw new RuntimeException("cannot contract a loop!");
 		}
-		for (Map.Entry<Integer, Integer> i : edges.get(to).entrySet()) {
-			if (i.getKey() == to) {
+		for (Pair<Integer, Integer> i : edges(to)) {
+			if (i.first() == to) {
 				// is self loop
-				addEdge(from, from, i.getValue());
+				addEdge(from, from, i.second());
 			} else {
-				addEdge(from, i.getKey(), i.getValue());
+				addEdge(from, i.first(), i.second());
 			}
 		}
-		remove(to);
+		clear(to);
 	}
 
 	// Ok, this implementation is seriously inefficient!
@@ -416,19 +424,20 @@ public class AdjacencyMatrix {
 		if (from == to) {
 			throw new RuntimeException("cannot contract a loop!");
 		}
-		for (Map.Entry<Integer, Integer> i : edges.get(to).entrySet()) {
-			if (from != i.getKey() && numEdges(from, i.getKey()) == 0) {
-				addEdge(from, i.getKey(), 1);
+		for (Pair<Integer, Integer> i : edges(to)){
+			if (from != i.first() && numEdges(from, i.first()) == 0) {
+				addEdge(from, i.first(), 1);
 			}
 		}
-		remove(to);
+		clear(to);
 	}
 
 	public String toString() {
 		StringBuilder ss = new StringBuilder();
 		for (int i : vertices) {
 			for (Pair<Integer, Integer> e : edges(i)) {
-				ss = ss.append(i).append(" -> ").append(e.first()).append(" x").append(e.second()).append('\n');
+				ss = ss.append(i).append(" -> ").append(e.first()).append(" x")
+						.append(e.second()).append('\n');
 			}
 		}
 
@@ -463,7 +472,6 @@ public class AdjacencyMatrix {
 	}
 
 	public class EdgeIterator implements Iterator<Pair<Integer, Integer>> {
-		private int vertex;
 		private int[] edges;
 		private Pair<Integer, Integer> next;
 
@@ -475,7 +483,6 @@ public class AdjacencyMatrix {
 
 		public EdgeIterator(int[] edges, int vertex) {
 			this.edges = edges;
-			this.vertex = vertex;
 			startBit = domainSize * CELL_SIZE * vertex;
 			endBit = domainSize * CELL_SIZE * (vertex + 1);
 
@@ -485,7 +492,8 @@ public class AdjacencyMatrix {
 		}
 
 		/**
-		 * Goes through and sets next to be the next available edge if there is one
+		 * Goes through and sets next to be the next available edge if there is
+		 * one
 		 */
 		private void findNextEdge() {
 			while (true) {
