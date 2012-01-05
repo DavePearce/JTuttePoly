@@ -39,10 +39,6 @@ public class SpanningGraph {
 		return graph.vertices();
 	}
 
-	public Iterable<Map<Integer, Integer>> edges() {
-		return graph.edges();
-	}
-
 	public Iterable<Map.Entry<Integer, Integer>> edges(int v) {
 		return graph.edges(v);
 	}
@@ -323,6 +319,8 @@ public class SpanningGraph {
 		}
 	}
 
+	
+	
 	private SpanningGraph extract_biconnect(Triple<Integer, Integer, Integer> e, BCDat data) {
 		SpanningGraph g = new SpanningGraph(graph.domainSize());
 		Triple<Integer, Integer, Integer> c = new Triple<Integer, Integer, Integer>(0, 0, 0);
@@ -354,24 +352,24 @@ public class SpanningGraph {
 		return graph.toString();
 	}
 	
+	
+	
 	public boolean equals(Object o){
 		if( o instanceof SpanningGraph ){
 			return this.equals((SpanningGraph)o);
 		}
 		return false;
 	}
+	
+	
 	public boolean equals(SpanningGraph g){
-		if(g.domain_size() != this.domain_size()){
+		if(g.nartics != this.nartics){
 			return false;
 		}
-		if(g.numEdges() != this.numEdges()){
+		if(g.ncomponents != this.ncomponents){
 			return false;
 		}
-		if(g.num_vertices() != this.num_vertices()){
-			return false;
-		}
-		
-		return true;
+		return this.graph.equals(g.graph);
 		
 	}
 }

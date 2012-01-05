@@ -46,14 +46,52 @@ public class AdjacencyList {
 		return vertices;
 	}
 
-	public Iterable<Map<Integer, Integer>> edges() {
-		return edges;
-	}
-
 	public Iterable<Map.Entry<Integer, Integer>> edges(int v) {
 		return edges.get(v).entrySet();
 	}
 
+	public boolean equals(Object o){
+		if(o instanceof AdjacencyList){
+			return this.equals((AdjacencyList)o);
+		}
+		return false;
+	}
+	
+	public boolean equals(AdjacencyList a){
+		if(a.domainSize != this.domainSize){
+			return false;
+		}
+		if(a.numEdges != this.numEdges){
+			return false;
+		}
+		if(a.numMultiEdges != this.numMultiEdges){
+			return false;
+		}
+		if(a.vertices.size() != this.vertices.size()){
+			return false;
+		}
+		if(a.edges.size() != this.edges.size()){
+			return false;
+		}
+		
+		for(int i = 0; i< this.edges.size();i++){
+			Map<Integer,Integer> edgethis = this.edges.get(i); //Edges from i
+			Map<Integer, Integer> edgeother = a.edges.get(i); 
+			if(edgethis.size() != edgeother.size()){
+				return false;
+			}
+			for(int to =0; to < edges.size();to++){
+				Integer thisnum = edgethis.get(to);
+				Integer othernum = edgeother.get(to);
+				if(thisnum != othernum){
+					return false;
+				}
+			}
+		}
+		return true;
+	}
+	
+	
 	public int numVertices() {
 		return vertices.size();
 	}
@@ -112,11 +150,6 @@ public class AdjacencyList {
 		edges.set(v, new HashMap<Integer, Integer>()); // save memory
 	}
 
-	public void clearall() {
-		for (int i : vertices) {
-			clear(i);
-		}
-	}
 
 	public void remove(int v) {
 		vertices.remove((Integer) v);
