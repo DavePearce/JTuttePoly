@@ -6,7 +6,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-public class AdjacencyList {
+public class AdjacencyList  {
 	private int numEdges;
 	private List<Integer> vertices;
 	private int domainSize;
