@@ -12,25 +12,22 @@ public class Graph {
 	private int nartics;
 	private int ncomponents;
 	
-	public Graph(int i) {
-		this(i, false);
-	}
 
-	public Graph(int i, boolean bfs) {
+	public Graph(int i) {
 		graph = new AdjacencyMatrix(i);
 		nartics = 0;
 		ncomponents = 0;
 	}
 
 	public Graph(AdjacencyMatrix g) {
-		this(g, false);
-	}
-
-	public Graph(AdjacencyMatrix g, boolean bfs) {
 		graph = new AdjacencyMatrix(g);
 		nartics = 0;
 		ncomponents = 0;
 		checkBiConnectivity();
+	}
+	
+	public Graph(Graph g) {
+		this(g.graph);
 	}
 	
 	public void addEdge(int from, int to) {
@@ -173,7 +170,7 @@ public class Graph {
 		} while (c != e);
 
 		// finally, remove any dumb vertices!
-		for (int i = 0; i != graph.domainSize(); ++i) {
+		for (int i = 0; i < graph.domainSize(); ++i) {
 			if (g.numEdges(i) == 0) {
 				g.graph.clear(i);
 			}
@@ -235,4 +232,9 @@ public class Graph {
 	private int numEdges(int vertex) {
 		return graph.numEdges(vertex);
 	}
+	
+	public String toString(){
+		return graph.toString();
+	}
+	
 }

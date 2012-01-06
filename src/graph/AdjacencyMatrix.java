@@ -1,24 +1,22 @@
 package graph;
 
-import java.util.HashMap;
 import java.util.Iterator;
-import java.util.Map;
 
 import polynomial.Pair;
+import util.Debug;
 
 public class AdjacencyMatrix {
 	private int numEdges;
 	private int domainSize;
 	private int numMultiEdges;
 	private int[] edges;
-	private static final int CELL_SIZE = 4;
+	private static final int CELL_SIZE = 12;
 	private int numVertices;
 	private int[] vertices;
 	private int startVertex;
 
 	/**
-	 * Make a new Adjacency matrix with a given number of vertices. All vertices
-	 * MUST have edges added to them during construction
+	 * Make a new Adjacency matrix with a given number of vertices. All vertices MUST have edges added to them during construction
 	 * 
 	 * @param n
 	 *            The number of vertices
@@ -28,20 +26,19 @@ public class AdjacencyMatrix {
 		numMultiEdges = 0;
 		domainSize = n;
 		numVertices = n;
-		edges = new int[(int) Math.ceil(n * n * 32.0 / CELL_SIZE)];
+		edges = new int[(int) Math.ceil(n * n * CELL_SIZE / 32.0)];
 
 		vertices = new int[n];
 		startVertex = 0;
 		for (int i = 0; i < n - 1; i++) {
-			vertices[n] = n + 1;
+			vertices[i] = i + 1;
 		}
 		vertices[n - 1] = -1;
 
 	}
 
 	/**
-	 * Deep clone an existing AdjacencyMatrix. The two are independent and
-	 * identical
+	 * Deep clone an existing AdjacencyMatrix. The two are independent and identical
 	 * 
 	 * @param g
 	 *            The AdjacencyMatrix to clone
@@ -56,6 +53,8 @@ public class AdjacencyMatrix {
 			edges[i] = g.edges[i];
 		}
 
+		numVertices = g.numVertices;
+		startVertex = g.startVertex;
 		vertices = new int[g.vertices.length];
 		for (int i = 0; i < vertices.length; i++) {
 			vertices[i] = g.vertices[i];
@@ -147,8 +146,7 @@ public class AdjacencyMatrix {
 	}
 
 	/**
-	 * Return the number of vertices that this vertex is connected to. This is
-	 * the same as the degree except that multiedges are only counted as 1
+	 * Return the number of vertices that this vertex is connected to. This is the same as the degree except that multiedges are only counted as 1
 	 * rather than their actual number
 	 * 
 	 * @param vertex
@@ -177,20 +175,14 @@ public class AdjacencyMatrix {
 		int index = (int) (startBit % 32);
 		boolean overflow = (index + CELL_SIZE) > 32;
 		if (overflow) {
-			long v = edges[startInt] | edges[startInt + 1] << 32;
-			int mask = 0;
+			long v = (((long) edges[startInt])) | ((long) (edges[startInt + 1]) << 32);
 			int m = (1 << CELL_SIZE) - 1;
-			long ret = v & (mask << index);
-			ret >>= index;
-			ret &= m;
+			long ret = (v >> index) & m;
 			return (int) ret;
 		} else {
 			int v = edges[startInt];
-			int mask = 0;
 			int m = (1 << CELL_SIZE) - 1;
-			int ret = v & (mask << index);
-			ret >>= index;
-			ret &= m;
+			int ret = (v >> index) & m;
 			return ret;
 		}
 	}
@@ -204,35 +196,33 @@ public class AdjacencyMatrix {
 	}
 
 	/**
-	 * Remove a vertex. This vertex is now guaranteed to have no edges to or
-	 * from it It is also removed from the list of vertices
+	 * Remove a vertex. This vertex is now guaranteed to have no edges to or from it It is also removed from the list of vertices
 	 * 
 	 * @param v
 	 *            The vertex to clear
 	 */
 	public void clear(int v) {
 		// Remove v from the list of vertices
-		if (vertices[v] == -1) {
-			throw new RuntimeException("Vertex has already been removed");
-		}
-
-		numVertices--;
 		if (startVertex == v) {
 			startVertex = vertices[v];
 		} else {
 			int i = vertices[startVertex];
 			while (vertices[i] != v) {
 				i = vertices[i];
+				if (i == -1) {
+					return;
+				}
 			}
 			vertices[i] = vertices[v];
 		}
 		vertices[v] = -1;
+		numVertices--;
 
 		// Now, clear all edges involving v
 		// first the row This is done long ways as this might be faster as it
 		// can write an int at a time
 		long startBit = domainSize * CELL_SIZE * v;
-		long endBit = domainSize * CELL_SIZE * v + 1;
+		long endBit = domainSize * CELL_SIZE * (v + 1);
 
 		int startInt = (int) (startBit / 32);
 		int endInt = (int) (endBit / 32);
@@ -241,23 +231,25 @@ public class AdjacencyMatrix {
 
 		if (startInt == endInt) {
 			// If the whole row is contain within the current int
-			int m = 0xFFFFFFFE << (domainSize * CELL_SIZE);
+			int m = 0xFFFFFFFF << (domainSize * CELL_SIZE);
 			m |= (1 << startIndex) - 1;
-			vertices[startInt] &= m;
+			edges[startInt] &= m;
 		} else {
 			// clear the starting int
 			if (startIndex != 0) {
 				// Need to only clear the END of the starting int
 				int m = (1 << startIndex) - 1;
-				vertices[startInt] &= m;
+				edges[startInt] &= m;
 				startInt++;
 			}
 			while (startInt < endInt) {
-				vertices[startInt++] = 0;
+				edges[startInt++] = 0;
 			}
 			// Clear as much of the last index as needed
-			int m = 0xFFFFFFFF << endIndex;
-			vertices[endInt] &= m;
+			if (endIndex != 0) {
+				int m = 0xFFFFFFFF << endIndex;
+				edges[endInt] &= m;
+			}
 
 		}
 
@@ -273,17 +265,32 @@ public class AdjacencyMatrix {
 		int startInt = (int) (startBit / 32);
 		int startIndex = (int) (startBit % 32);
 
-		boolean overflow = startIndex + CELL_SIZE < 32;
+		boolean overflow = startIndex + CELL_SIZE > 32;
 		if (overflow) {
-			int maskFirst = (1 << startIndex) - 1;
 			int leftOver = CELL_SIZE - 32 + startIndex;
-			int maskSecond = 0xFFFFFFFF ^ ((1 << leftOver) - 1);
 
-			vertices[startInt] &= maskFirst;
-			vertices[startInt + 1] &= maskSecond;
+			// First clear the value
+			int maskFirst = (1 << startIndex) - 1;
+			int maskSecond = ~((1 << leftOver) - 1);
+
+			edges[startInt] &= maskFirst;
+			edges[startInt + 1] &= maskSecond;
+
+			// Write the value
+			maskFirst = (val << startIndex);
+			maskSecond = (val) >> (32 - startIndex);
+
+			edges[startInt] |= maskFirst;
+			edges[startInt + 1] |= maskSecond;
+
 		} else {
-			int mask = 0xFFFFFFFF ^ (((1 << (CELL_SIZE)) - 1) << startIndex);
-			vertices[startInt] &= mask;
+			// first clear the value
+			int mask = (((1 << (32 - startIndex - CELL_SIZE)) - 1) << (startIndex + CELL_SIZE)) | ((1 << startIndex) - 1);
+			edges[startInt] &= mask;
+
+			// Write the value
+			mask = (val << startIndex);
+			edges[startInt] |= mask;
 		}
 	}
 
@@ -360,7 +367,7 @@ public class AdjacencyMatrix {
 			numMultiEdges -= (r - 1);
 			setValue(from, to, 0);
 			if (from != to) {
-				setValue(to,from,0);
+				setValue(to, from, 0);
 			}
 		}
 
@@ -424,7 +431,7 @@ public class AdjacencyMatrix {
 		if (from == to) {
 			throw new RuntimeException("cannot contract a loop!");
 		}
-		for (Pair<Integer, Integer> i : edges(to)){
+		for (Pair<Integer, Integer> i : edges(to)) {
 			if (from != i.first() && numEdges(from, i.first()) == 0) {
 				addEdge(from, i.first(), 1);
 			}
@@ -434,10 +441,11 @@ public class AdjacencyMatrix {
 
 	public String toString() {
 		StringBuilder ss = new StringBuilder();
-		for (int i : vertices) {
+		for (int i : vertices()) {
 			for (Pair<Integer, Integer> e : edges(i)) {
-				ss = ss.append(i).append(" -> ").append(e.first()).append(" x")
-						.append(e.second()).append('\n');
+				if (e.first() >= i || Debug.debug) {
+					ss = ss.append(i).append(" -> ").append(e.first()).append(" x").append(e.second()).append('\n');
+				}
 			}
 		}
 
@@ -492,50 +500,42 @@ public class AdjacencyMatrix {
 		}
 
 		/**
-		 * Goes through and sets next to be the next available edge if there is
-		 * one
+		 * Goes through and sets next to be the next available edge if there is one
 		 */
 		private void findNextEdge() {
 			while (true) {
+				if (dest == domainSize) {
+					next = null;
+					return;
+				}
+
 				int startInt = (int) (currBit / 32);
 				int index = (int) (currBit % 32);
 				boolean overflow = (index + CELL_SIZE) > 32;
 
 				int ret;
 				if (overflow) {
-					long v = edges[startInt] | edges[startInt + 1] << 32;
-					int mask = 0;
-					int m = 1;
-					for (int i = 0; i < CELL_SIZE; i++) {
-						mask |= m;
-						m <<= 1;
-					}
-					ret = (int) (((v & (mask << index)) >> index) & m);
+					long v = ((long) edges[startInt]) | (((long) edges[startInt + 1]) << 32);
+					int m = (1 << CELL_SIZE) - 1;
+					ret = (int) ((v >> index) & m);
 				} else {
 					int v = edges[startInt];
-					int mask = 0;
-					int m = 1;
-					for (int i = 0; i < CELL_SIZE; i++) {
-						mask |= m;
-						m <<= 1;
-					}
-					ret = ((v & (mask << index)) >> index) & m;
+					int m = (1 << CELL_SIZE) - 1;
+					ret = (int) ((v >> index) & m);
 				}
+
 				currBit += CELL_SIZE;
-				dest++;
 				if (ret != 0) {
-					next = new Pair<Integer, Integer>(dest, ret);
-					return;
-				} else if (dest == domainSize) {
-					next = null;
+					next = new Pair<Integer, Integer>(dest++, ret);
 					return;
 				}
+				dest += 1;
 			}
 		}
 
 		@Override
 		public boolean hasNext() {
-			return next == null;
+			return next != null;
 		}
 
 		@Override
@@ -582,6 +582,81 @@ public class AdjacencyMatrix {
 		public void remove() {
 			throw new UnsupportedOperationException("Remove not implemented");
 		}
+
+	}
+
+	public static void main(String args[]) {
+		int nedges = 3;
+		AdjacencyMatrix g = new AdjacencyMatrix(nedges);
+
+		System.out.println("-----Adding one of each edge");
+		for (int i = 0; i < nedges; i++) {
+			for (int j = i; j < nedges; j++) {
+				g.addEdge(i, j);
+			}
+		}
+
+		System.out.println("-----toString test");
+		System.out.println(g);
+
+		System.out.println("-----Normal Reading test");
+		for (int i = 0; i < nedges; i++) {
+			for (int j = 0; j < nedges; j++) {
+				System.out.println(i + " -> " + j + " x" + g.numEdges(i, j));
+			}
+		}
+
+		System.out.println("-----Adding one of each edge");
+		for (int i = 0; i < nedges; i++) {
+			for (int j = i; j < nedges; j++) {
+				g.addEdge(i, j);
+			}
+		}
+
+		System.out.println("-----Normal Reading");
+		for (int i = 0; i < nedges; i++) {
+			for (int j = 0; j < nedges; j++) {
+				System.out.println(i + " -> " + j + " x" + g.numEdges(i, j));
+			}
+		}
+
+		System.out.println("-----Remove one from each edges");
+		for (int i = 0; i < nedges; i++) {
+			for (int j = i; j < nedges; j++) {
+				g.removeEdge(i, j);
+			}
+		}
+
+		System.out.println("-----Normal Reading");
+		for (int i = 0; i < nedges; i++) {
+			for (int j = 0; j < nedges; j++) {
+				System.out.println(i + " -> " + j + " x" + g.numEdges(i, j));
+			}
+		}
+
+		System.out.println("-----Remove vertex 0");
+		g.clear(0);
+
+		System.out.println("-----Normal Reading");
+		for (int i = 0; i < nedges; i++) {
+			for (int j = 0; j < nedges; j++) {
+				System.out.println(i + " -> " + j + " x" + g.numEdges(i, j));
+			}
+		}
+
+		System.out.println("-----toString");
+		System.out.println(g);
+
+		System.out.println("-----Removing 1 and 2 from G2");
+		AdjacencyMatrix g2 = new AdjacencyMatrix(g);
+		g2.clear(1);
+		g2.clear(2);
+
+		System.out.println("-----toString g");
+		System.out.println(g);
+
+		System.out.println("-----toString g2");
+		System.out.println(g2);
 
 	}
 }

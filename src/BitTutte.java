@@ -1,8 +1,9 @@
-import graph.SpanningGraph;
+import graph.Graph;
 
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -10,12 +11,13 @@ import java.util.Random;
 import java.util.Scanner;
 
 import polynomial.FactorPoly;
+import polynomial.Pair;
 import polynomial.X;
 import polynomial.Y;
 import util.Debug;
 import util.Triple;
 
-public class Tutte {
+public class BitTutte {
 	MyTimer global_timer;
 	boolean status_flag;
 	boolean write_tree;
@@ -37,15 +39,15 @@ public class Tutte {
 
 	public static void main(String[] args) {
 		if (args.length == 1) {
-			new Tutte(args[0]);
+			new BitTutte(args[0]);
 		} else {
 			for (int i = 0; i < 100; i++) {
-				new Tutte(null);
+				new BitTutte(null);
 			}
 		}
 	}
 
-	public Tutte(String s) {
+	public BitTutte(String s) {
 		global_timer = new MyTimer();
 		num_steps = 0;
 		num_cycles = 0;
@@ -58,7 +60,7 @@ public class Tutte {
 		int minMulti = 1;
 		int varMulti = 1;
 
-		SpanningGraph g = null;
+		Graph g = null;
 		long seed = 0;
 
 		if (s != null) {
@@ -66,13 +68,24 @@ public class Tutte {
 				File f = new File(s);
 				Scanner scan = new Scanner(f);
 				scan.useDelimiter("[^0-9]+");
-				g = new SpanningGraph(30);
+				List<Pair<Integer,Integer>> l = new ArrayList<Pair<Integer,Integer>>();
+				Map<Integer,Integer> numbers = new HashMap<Integer,Integer>();
+				int count = 0;
 				while(scan.hasNext()){
-//					System.out.println(scan.next());
-					
 					int from = scan.nextInt();
 					int to = scan.nextInt();
-					g.addEdge(from, to);
+					l.add(new Pair<Integer,Integer>(from,to));
+					if(!numbers.containsKey(from)){
+						numbers.put(from,count++);
+					}
+					if(!numbers.containsKey(to)){
+						numbers.put(to,count++);
+					}
+					
+				}
+				g = new Graph(count);
+				for(Pair<Integer,Integer> i : l){
+					g.addEdge(numbers.get(i.first()), numbers.get(i.second()));
 				}
 //				return;
 			} catch (FileNotFoundException e) {
@@ -90,14 +103,14 @@ public class Tutte {
 			int numEdges = rand.nextInt(varEdges) + minEdges;
 
 			System.out.println("Graph with " + numVertex + " vertices and " + numEdges + " edges");
-			g = new SpanningGraph(numVertex);
+			g = new Graph(numVertex);
 
 			for (int i = 0; i < numEdges; i++) {
 				int from = rand.nextInt(numVertex);
 				int to = rand.nextInt(numVertex);
 				int num = rand.nextInt(varMulti) + minMulti;
 				numEdges += num - 1;
-				Debug.debug("Adding " + from + " -> " + to + " x" + num);
+				debug("Adding " + from + " -> " + to + " x" + num);
 				g.addEdge(from, to, num);
 			}
 		}
@@ -114,9 +127,11 @@ public class Tutte {
 
 	}
 
-	private FactorPoly tutte(SpanningGraph graph, int mid) {
+	private FactorPoly tutte(Graph graph, int mid) {
 		num_steps++;
 
+		debug("Original Graph:\n");
+		debug(graph);
 		// === 1. APPLY SIMPLIFICATIONS ===
 		FactorPoly RF = new FactorPoly(new Y(reduce_loops(graph)));
 		// System.out.println("Removing all loops to get " + RF.toString());
@@ -126,17 +141,17 @@ public class Tutte {
 		// === 3. CHECK FOR ARTICULATIONS, DISCONNECTS AND/OR TREES ===
 
 		if (reduce_multicycles && graph.isMulticycle()) {
-			Debug.debug("--- MultiCycle ---");
+			debug("--- MultiCycle ---");
 			num_cycles++;
 			poly = reduce_cycle(new FactorPoly(new X(1)), graph);
 
-			Debug.debug(poly);
+			debug(poly);
 			// if(write_tree) { write_tree_leaf(mid,graph,cout); }
 		} else if (!graph.isBiconnected()) {
-			List<SpanningGraph> biconnects = new ArrayList<SpanningGraph>();
+			List<Graph> biconnects = new ArrayList<Graph>();
 			graph.extractBiconnectedComponents(biconnects);
 
-			Debug.debug("--- Bridge --- " + biconnects.size());
+			debug("--- Bridge --- " + biconnects.size());
 
 			// figure out how many tree ids I need
 			int tid = tree_id;
@@ -158,13 +173,13 @@ public class Tutte {
 				num_disbicomps++;
 			}
 			poly = reduce_tree(new FactorPoly(new X(1)), graph);
-			Debug.debug(poly);
+			debug(poly);
 
 			// now, actually do the computation
-			for (SpanningGraph i : biconnects) {
+			for (Graph i : biconnects) {
 				num_bicomps++;
 				if (i.isMulticycle()) {
-					Debug.debug("--- Is inner multicycle");
+					debug("--- Is inner multicycle");
 					// this is actually a cycle!
 					num_cycles++;
 					poly.times(reduce_cycle(new FactorPoly(new X(1)), i));
@@ -174,7 +189,7 @@ public class Tutte {
 				}
 			}
 		} else {
-			Debug.debug("--- DELETE / CONTRACT ---");
+			debug("--- DELETE / CONTRACT ---");
 			// TREE OUTPUT STUFF
 			int lid = tree_id;
 			int rid = tree_id + 1;
@@ -183,7 +198,7 @@ public class Tutte {
 
 			// === 4. PERFORM DELETE / CONTRACT ===
 
-			SpanningGraph g2 = new SpanningGraph(graph);
+			Graph g2 = new Graph(graph);
 			Triple<Integer, Integer, Integer> edge = select_edge(graph);
 
 			// System.out.println("---Picked Edge " + edge);
@@ -206,7 +221,7 @@ public class Tutte {
 				poly.add(pp);
 			} else {
 				poly = tutte(graph, lid);
-				Debug.debug("--returning");
+				debug("--returning");
 				poly.add(tutte(g2, rid));
 			}
 		}
@@ -214,7 +229,7 @@ public class Tutte {
 		return poly.timesnew(RF);
 	}
 
-	// private FactorPoly reduce_pendant(int p, SpanningGraph graph) {
+	// private FactorPoly reduce_pendant(int p, Graph graph) {
 	// int count = graph.numEdges(p);
 	// graph.remove(p);
 	//
@@ -225,15 +240,15 @@ public class Tutte {
 	// return r;
 	// }
 
-	private FactorPoly reduce_tree(FactorPoly X_p, SpanningGraph graph) {
+	private FactorPoly reduce_tree(FactorPoly X_p, Graph graph) {
 		FactorPoly r = new FactorPoly(new Y(0)); // new polymial "1"
 
 		for (int i : graph.vertices()) { // For each vertex
-			for (Map.Entry<Integer, Integer> j : graph.edges(i)) { // For each edge from that vertex
-				if (i >= j.getKey()) {// no double ups
+			for (Pair<Integer, Integer> j : graph.edges(i)) { // For each edge from that vertex
+				if (i >= j.first()) {// no double ups
 					FactorPoly xy = new FactorPoly(X_p);
-					if (j.getValue() > 1) {
-						xy.add(new Y(1, j.getValue() - 1));
+					if (j.second() > 1) {
+						xy.add(new Y(1, j.second() - 1));
 					}
 					r.times(xy);
 				}
@@ -245,7 +260,7 @@ public class Tutte {
 
 	static List<Triple<Integer, Integer, Integer>> line = new ArrayList<Triple<Integer, Integer, Integer>>();
 
-	private FactorPoly reduce_cycle(FactorPoly X_p, SpanningGraph graph) {
+	private FactorPoly reduce_cycle(FactorPoly X_p, Graph graph) {
 		// This is a somewhat icky piece of code for reducing
 		// a cycle. it's really a hack at the moment.
 
@@ -254,14 +269,14 @@ public class Tutte {
 		int s = v;
 
 		do {
-			Iterator<Map.Entry<Integer, Integer>> itj = graph.edges(v).iterator();
-			Map.Entry<Integer, Integer> j = itj.next();
-			if (j.getKey() == last) {
+			Iterator<Pair<Integer, Integer>> itj = graph.edges(v).iterator();
+			Pair<Integer, Integer> j = itj.next();
+			if (j.first() == last) {
 				j = itj.next();
 			}
 			last = v;
-			line.add(new Triple<Integer, Integer, Integer>(v, j.getKey(), j.getValue()));
-			v = j.getKey();
+			line.add(new Triple<Integer, Integer, Integer>(v, j.first(), j.second()));
+			v = j.first();
 		} while (v != s);
 
 		FactorPoly xs = new FactorPoly(X_p);
@@ -296,7 +311,7 @@ public class Tutte {
 		return xs;
 	}
 
-	int reduce_loops(SpanningGraph graph) {
+	int reduce_loops(Graph graph) {
 		int c = 0;
 		for (Integer i : graph.vertices()) {
 			c += graph.removeAllEdges(i, i);
@@ -304,7 +319,7 @@ public class Tutte {
 		return c;
 	}
 
-	private Triple<Integer, Integer, Integer> select_edge(SpanningGraph graph) {
+	private Triple<Integer, Integer, Integer> select_edge(Graph graph) {
 		// assumes this graph is NOT a cycle and NOT a tree
 		int best = 0;
 		int rcount = 0;
@@ -318,9 +333,9 @@ public class Tutte {
 		for (int i : graph.vertices()) {
 			int head = i;
 
-			for (Map.Entry<Integer, Integer> j : graph.edges(i)) {
-				int tail = j.getKey();
-				int count = j.getValue();
+			for (Pair<Integer, Integer> j : graph.edges(i)) {
+				int tail = j.first();
+				int count = j.second();
 
 				if (head < tail) { // to avoid duplicates
 					int cost = 1;
@@ -345,5 +360,7 @@ public class Tutte {
 		return r;
 	}
 
-
+	public void debug(Object s) {
+		Debug.debug(s);
+	}
 }
