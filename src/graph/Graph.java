@@ -104,7 +104,7 @@ public class Graph {
 		return ncomponents == 1 && nartics == 1;
 	}
 	
-	static BCDat datae = new BCDat();
+	private BCDat datae = new BCDat();
 
 	public void extractBiconnectedComponents(List<Graph> bcs) { // was retree
 		// Now, we traverse the entire graph and extract any and all biconnected components
@@ -184,7 +184,7 @@ public class Graph {
 		return g;
 	}
 	
-	static BCDat datac = new BCDat();	
+	private BCDat datac = new BCDat();	
 	private void checkBiConnectivity() { // was retree
 		// reset visited information
 
