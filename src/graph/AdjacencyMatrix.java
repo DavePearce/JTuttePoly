@@ -206,7 +206,7 @@ public class AdjacencyMatrix {
 		if (startVertex == v) {
 			startVertex = vertices[v];
 		} else {
-			int i = vertices[startVertex];
+			int i = startVertex;
 			while (vertices[i] != v) {
 				i = vertices[i];
 				if (i == -1) {
@@ -652,11 +652,25 @@ public class AdjacencyMatrix {
 		g2.clear(1);
 		g2.clear(2);
 
+		System.out.println("-----toString g2");
+		System.out.println(g2);
+		
+
 		System.out.println("-----toString g");
 		System.out.println(g);
 
-		System.out.println("-----toString g2");
-		System.out.println(g2);
+		System.out.println("-----Adding 4, removing 3 and adding 5 from 1 -- 2");
+		g.addEdge(1, 2, 4);
+		g.removeEdge(1, 2, 3);
+		g.addEdge(1, 2, 5);
+		
+		System.out.println("-----toString g");
+		System.out.println(g);
 
+		System.out.println("-----Clearing 2");
+		g.clear(2);
+
+		System.out.println("-----toString g");
+		System.out.println(g);
 	}
 }
