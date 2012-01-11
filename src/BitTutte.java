@@ -152,7 +152,7 @@ public class BitTutte {
 			FactorPoly r = cache.get(graph);
 			if (r != null) {
 				debug("Cache Hit!!");
-				return r.timesnew(RF);
+//				return r.timesnew(RF);
 			}
 		}
 

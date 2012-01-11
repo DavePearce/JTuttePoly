@@ -862,6 +862,62 @@ public class AdjacencyMatrix {
 				}
 			}
 		}
-
+		
+		System.out.println("-----Removing Cycles");
+		int count = 0;
+		for(int i : g.vertices()){
+			count += g.removeAllEdges(i, i);
+		}
+		
+		if(count != 7){
+			throw new RuntimeException();
+		}
+		
+		if(g.numEdges != 4){
+			throw new RuntimeException();
+		}
+		if(g.numMultiEdges != 3){
+			throw new RuntimeException();
+		}
+		
+		s = g.toString();
+		target = "0 -> 2 x4\n";
+		if (!s.equals(target)) {
+			System.err.println("Adding edge failed - toString");
+			System.err.println(s);
+		}
+		
+		for (int i = 0; i < nedges; i++) {
+			for (int j = 0; j < nedges; j++) {
+				if (g.numEdges(j,i) != g.numEdges(i, j)) {
+					System.err.println("Adding edge failed - Normal Reading");
+				}
+			}
+		}
+		
+		System.out.println("-----Testing Contraction (2,0)");
+		g.contractEdge(0, 2);
+		if(g.numEdges != 3){
+			throw new RuntimeException("contraction " + g.numEdges);
+		}
+		if(g.numMultiEdges != 2){
+			throw new RuntimeException();
+		}
+		
+		s = g.toString();
+		target = "0 -> 0 x3\n";
+		if (!s.equals(target)) {
+			System.err.println("Adding edge failed - toString");
+			System.err.println(s);
+		}
+		
+		for (int i = 0; i < nedges; i++) {
+			for (int j = 0; j < nedges; j++) {
+				if (g.numEdges(j,i) != g.numEdges(i, j)) {
+					System.err.println("Adding edge failed - Normal Reading");
+				}
+			}
+		}
+		
 	}
 }
