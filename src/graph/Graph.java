@@ -3,7 +3,7 @@ package graph;
 import java.util.List;
 import java.util.Map;
 
-import polynomial.Pair;
+import util.Pair;
 import util.Triple;
 
 public class Graph {
@@ -233,8 +233,26 @@ public class Graph {
 		return graph.numEdges(vertex);
 	}
 	
+	public int numUnderlyingEdges(int vertex){
+		return graph.numUnderlyingEdges(vertex);
+	}
+	
 	public String toString(){
 		return graph.toString();
 	}
 	
+	public int numVertices(){
+		return graph.numVertices();
+	}
+	
+	public int hashCode(){
+		return graph.hashCode();
+	}
+	
+	public boolean equals(Object o){
+		if(o instanceof Graph){
+			return this.graph.equals(((Graph) o).graph);
+		}
+		return false;
+	}
 }

@@ -2,15 +2,15 @@ package graph;
 
 import java.util.Iterator;
 
-import polynomial.Pair;
 import util.Debug;
+import util.Pair;
 
 public class AdjacencyMatrix {
 	private int numEdges;
 	private int domainSize;
 	private int numMultiEdges;
 	private int[] edges;
-	private static final int CELL_SIZE = 12;
+	private static final int CELL_SIZE = 6;
 	private int numVertices;
 	private int[] vertices;
 	private int startVertex;
@@ -91,8 +91,8 @@ public class AdjacencyMatrix {
 	}
 
 	public boolean equals(Object o) {
-		if (o instanceof AdjacencyList) {
-			return this.equals((AdjacencyList) o);
+		if (o instanceof AdjacencyMatrix) {
+			return this.equals((AdjacencyMatrix) o);
 		}
 		return false;
 	}
@@ -175,7 +175,7 @@ public class AdjacencyMatrix {
 		int index = (int) (startBit % 32);
 		boolean overflow = (index + CELL_SIZE) > 32;
 		if (overflow) {
-			long v = (((long) edges[startInt])) | ((long) (edges[startInt + 1]) << 32);
+			long v = ((0xFFFFFFFFL &  edges[startInt])) | ((0xFFFFFFFFL & edges[startInt + 1]) << 32);
 			int m = (1 << CELL_SIZE) - 1;
 			long ret = (v >> index) & m;
 			return (int) ret;
@@ -218,6 +218,17 @@ public class AdjacencyMatrix {
 		vertices[v] = -1;
 		numVertices--;
 
+		// first delete the edges that don't start at you
+		// Now delete the columns
+		for (int i = 0; i < domainSize; i++) {
+			int num = numEdges(i, v);
+			if (num != 0) {
+				numEdges -= num;
+				numMultiEdges -= (num - 1);
+				setValue(i, v, 0);
+			}
+		}
+
 		// Now, clear all edges involving v
 		// first the row This is done long ways as this might be faster as it
 		// can write an int at a time
@@ -253,10 +264,6 @@ public class AdjacencyMatrix {
 
 		}
 
-		// Now delete the columns
-		for (int i = 0; i < domainSize; i++) {
-			setValue(i, v, 0);
-		}
 	}
 
 	private void setValue(int from, int to, int val) {
@@ -315,7 +322,9 @@ public class AdjacencyMatrix {
 		c += num;
 
 		setValue(from, to, c);
-		setValue(to, from, c);
+		if (from != to) {
+			setValue(to, from, c);
+		}
 
 		return num != 0;
 	}
@@ -420,23 +429,9 @@ public class AdjacencyMatrix {
 				addEdge(from, i.first(), i.second());
 			}
 		}
+		
 		clear(to);
-	}
-
-	// Ok, this implementation is seriously inefficient!
-	// could use an indirection trick here as one solution?
-	//
-	// POST: vertex 'from' remains, whilst vertex 'to' is removed
-	public void simpleContractEdge(int from, int to) {
-		if (from == to) {
-			throw new RuntimeException("cannot contract a loop!");
-		}
-		for (Pair<Integer, Integer> i : edges(to)) {
-			if (from != i.first() && numEdges(from, i.first()) == 0) {
-				addEdge(from, i.first(), 1);
-			}
-		}
-		clear(to);
+		removeEdge(from, from,1);
 	}
 
 	public String toString() {
@@ -452,7 +447,7 @@ public class AdjacencyMatrix {
 		return ss.toString();
 	}
 
-	public int hashcode() {
+	public int hashCode() {
 		return Hash.hashcode(edges);
 	}
 
@@ -515,7 +510,7 @@ public class AdjacencyMatrix {
 
 				int ret;
 				if (overflow) {
-					long v = ((long) edges[startInt]) | (((long) edges[startInt + 1]) << 32);
+					long v = ((0xFFFFFFFFL &  edges[startInt])) | ((0xFFFFFFFFL & edges[startInt + 1]) << 32);
 					int m = (1 << CELL_SIZE) - 1;
 					ret = (int) ((v >> index) & m);
 				} else {
@@ -596,13 +591,23 @@ public class AdjacencyMatrix {
 			}
 		}
 
-		System.out.println("-----toString test");
-		System.out.println(g);
+		if (g.numEdges != 6) {
+			throw new RuntimeException("Adding edge failed - numEdges");
+		}
+		if (g.numMultiEdges != 0) {
+			throw new RuntimeException("Adding edge failed - numMultiEdge");
+		}
+		String s = g.toString();
+		String target = "0 -> 0 x1\n0 -> 1 x1\n0 -> 2 x1\n1 -> 1 x1\n1 -> 2 x1\n2 -> 2 x1\n";
+		if (!s.equals(target)) {
+			throw new RuntimeException("Adding edge failed - toString");
+		}
 
-		System.out.println("-----Normal Reading test");
 		for (int i = 0; i < nedges; i++) {
 			for (int j = 0; j < nedges; j++) {
-				System.out.println(i + " -> " + j + " x" + g.numEdges(i, j));
+				if (1 != g.numEdges(i, j)) {
+					throw new RuntimeException("Adding edge failed - Normal Reading");
+				}
 			}
 		}
 
@@ -613,11 +618,24 @@ public class AdjacencyMatrix {
 			}
 		}
 
-		System.out.println("-----Normal Reading");
+		if (g.numEdges != 12) {
+			throw new RuntimeException("Adding edge failed - numEdges");
+		}
+		if (g.numMultiEdges != 6) {
+			throw new RuntimeException("Adding edge failed - numMultiEdge");
+		}
 		for (int i = 0; i < nedges; i++) {
 			for (int j = 0; j < nedges; j++) {
-				System.out.println(i + " -> " + j + " x" + g.numEdges(i, j));
+				if (2 != g.numEdges(i, j)) {
+					throw new RuntimeException("Adding edge failed - Normal Reading");
+				}
 			}
+		}
+
+		s = g.toString();
+		target = "0 -> 0 x2\n0 -> 1 x2\n0 -> 2 x2\n1 -> 1 x2\n1 -> 2 x2\n2 -> 2 x2\n";
+		if (!s.equals(target)) {
+			throw new RuntimeException("Adding edge failed - toString");
 		}
 
 		System.out.println("-----Remove one from each edges");
@@ -627,50 +645,223 @@ public class AdjacencyMatrix {
 			}
 		}
 
-		System.out.println("-----Normal Reading");
+		if (g.numEdges != 6) {
+			throw new RuntimeException("Remove edge failed - numEdges");
+		}
+		if (g.numMultiEdges != 0) {
+			throw new RuntimeException("Remove edge failed - numMultiEdge");
+		}
+		s = g.toString();
+		target = "0 -> 0 x1\n0 -> 1 x1\n0 -> 2 x1\n1 -> 1 x1\n1 -> 2 x1\n2 -> 2 x1\n";
+		if (!s.equals(target)) {
+			throw new RuntimeException("Remove edge failed - toString");
+		}
+
 		for (int i = 0; i < nedges; i++) {
 			for (int j = 0; j < nedges; j++) {
-				System.out.println(i + " -> " + j + " x" + g.numEdges(i, j));
+				if (1 != g.numEdges(i, j)) {
+					throw new RuntimeException("Remove edge failed - Normal Reading");
+				}
 			}
 		}
 
 		System.out.println("-----Remove vertex 0");
 		g.clear(0);
+		if (g.numEdges != 3) {
+			System.err.println("Adding edge failed - numEdges");
+		}
+		if (g.numMultiEdges != 0) {
+			System.err.println("Adding edge failed - numMultiEdge");
+		}
+		s = g.toString();
+		target = "1 -> 1 x1\n1 -> 2 x1\n2 -> 2 x1\n";
+		if (!s.equals(target)) {
+			System.err.println("Adding edge failed - toString");
+		}
 
-		System.out.println("-----Normal Reading");
 		for (int i = 0; i < nedges; i++) {
 			for (int j = 0; j < nedges; j++) {
-				System.out.println(i + " -> " + j + " x" + g.numEdges(i, j));
+				if (((i == 0 || j == 0) && 0 != g.numEdges(i, j)) || (i != 0 && j != 0 && 1 != g.numEdges(i, j))) {
+					System.err.println("Adding edge failed - Normal Reading");
+				}
 			}
 		}
 
-		System.out.println("-----toString");
-		System.out.println(g);
+		System.out.println("-----Testing clones");
+		AdjacencyMatrix g2 = new AdjacencyMatrix(g);
+		if (g.numEdges != g2.numEdges) {
+			System.err.println("Clone numedges failed");
+		}
+		if (g.numMultiEdges != g2.numMultiEdges) {
+			System.err.println("Clone numMultiEdges failed");
+		}
+		if (g.hashCode() != g2.hashCode()) {
+			System.err.println("Clone hashCode failed");
+		}
+		if (!g.equals(g2)) {
+			System.err.println("Clone equals failed");
+		}
 
 		System.out.println("-----Removing 1 and 2 from G2");
-		AdjacencyMatrix g2 = new AdjacencyMatrix(g);
 		g2.clear(1);
 		g2.clear(2);
 
-		System.out.println("-----toString g2");
-		System.out.println(g2);
-		
+		if (g2.numEdges != 0) {
+			System.err.println("clear failed - numEdges");
+		}
+		if (g2.numMultiEdges != 0) {
+			System.err.println("clear failed - numMultiEdge");
+		}
+		s = g2.toString();
+		target = "";
+		if (!s.equals(target)) {
+			System.err.println("clear failed - toString");
+		}
+		for (int i = 0; i < nedges; i++) {
+			for (int j = 0; j < nedges; j++) {
+				if (0 != g2.numEdges(i, j)) {
+					System.err.println("clear - Normal Reading");
+				}
+			}
+		}
 
-		System.out.println("-----toString g");
-		System.out.println(g);
+		if (g.numEdges != 3) {
+			System.err.println("Adding edge failed - numEdges");
+		}
+		if (g.numMultiEdges != 0) {
+			System.err.println("Adding edge failed - numMultiEdge");
+		}
+		s = g.toString();
+		target = "1 -> 1 x1\n1 -> 2 x1\n2 -> 2 x1\n";
+		if (!s.equals(target)) {
+			System.err.println("Adding edge failed - toString");
+		}
+
+		for (int i = 0; i < nedges; i++) {
+			for (int j = 0; j < nedges; j++) {
+				if (((i == 0 || j == 0) && 0 != g.numEdges(i, j)) || (i != 0 && j != 0 && 1 != g.numEdges(i, j))) {
+					System.err.println("Adding edge failed - Normal Reading");
+				}
+			}
+		}
 
 		System.out.println("-----Adding 4, removing 3 and adding 5 from 1 -- 2");
 		g.addEdge(1, 2, 4);
 		g.removeEdge(1, 2, 3);
 		g.addEdge(1, 2, 5);
-		
-		System.out.println("-----toString g");
-		System.out.println(g);
+
+		s = g.toString();
+		target = "1 -> 1 x1\n1 -> 2 x7\n2 -> 2 x1\n";
+		if (!s.equals(target)) {
+			System.err.println("Adding edge failed - toString");
+		}
+
+		for (int i = 0; i < nedges; i++) {
+			for (int j = 0; j < nedges; j++) {
+				if (g.numEdges(i, j) != g.numEdges(j, i)) {
+					System.err.println("Adding edge failed - Normal Reading");
+				}
+			}
+		}
+
+		if (g.numEdges != 9) {
+			System.err.println("clear failed - numEdges");
+		}
+		if (g.numMultiEdges != 6) {
+			System.err.println("clear failed - numMultiEdge");
+		}
 
 		System.out.println("-----Clearing 2");
 		g.clear(2);
 
-		System.out.println("-----toString g");
-		System.out.println(g);
+		s = g.toString();
+		target = "1 -> 1 x1\n";
+		if (!s.equals(target)) {
+			System.err.println("Adding edge failed - toString");
+		}
+		if (g.numEdges != 1) {
+			System.err.println("clear failed - numEdges");
+		}
+		if (g.numMultiEdges != 0) {
+			System.err.println("clear failed - numMultiEdge");
+		}
+
+		System.out.println("-----Removing 2 from 1 -- 1");
+		g.removeEdge(1, 1, 2);
+		if (g.numEdges != 0) {
+			System.err.println("clear failed - numEdges");
+		}
+		if (g.numMultiEdges != 0) {
+			System.err.println("clear failed - numMultiEdge");
+		}
+
+		s = g.toString();
+		target = "";
+		if (!s.equals(target)) {
+			System.err.println("Clear - toString");
+		}
+
+		for (int i = 0; i < nedges; i++) {
+			for (int j = 0; j < nedges; j++) {
+				if (g.numEdges(i, j) != 0) {
+					System.err.println("clear failed - Normal Reading");
+				}
+			}
+		}
+
+		System.out.println("-----Making k3 with pairs");
+		g = new AdjacencyMatrix(3);
+
+		for (int i = 0; i < nedges; i++) {
+			for (int j = i; j < nedges; j++) {
+				g.addEdge(i, j, 2);
+			}
+		}
+
+		if (g.numEdges != 12) {
+			System.err.println("Adding edge failed - numEdges");
+		}
+		if (g.numMultiEdges != 6) {
+			System.err.println("Adding edge failed - numMultiEdge");
+		}
+		for (int i = 0; i < nedges; i++) {
+			for (int j = 0; j < nedges; j++) {
+				if (2 != g.numEdges(i, j)) {
+					System.err.println("Adding edge failed - Normal Reading");
+				}
+			}
+		}
+
+		s = g.toString();
+		target = "0 -> 0 x2\n0 -> 1 x2\n0 -> 2 x2\n1 -> 1 x2\n1 -> 2 x2\n2 -> 2 x2\n";
+		if (!s.equals(target)) {
+			System.err.println("Adding edge failed - toString");
+			System.err.println(s);
+		}
+		
+		System.out.println("-----Testing Contraction (1,0)");
+		g.contractEdge(0, 1);
+		if(g.numEdges != 11){
+			throw new RuntimeException("contraction " + g.numEdges);
+		}
+		if(g.numMultiEdges != 8){
+			throw new RuntimeException();
+		}
+		
+		s = g.toString();
+		target = "0 -> 0 x5\n0 -> 2 x4\n2 -> 2 x2\n";
+		if (!s.equals(target)) {
+			System.err.println("Adding edge failed - toString");
+			System.err.println(s);
+		}
+		
+		for (int i = 0; i < nedges; i++) {
+			for (int j = 0; j < nedges; j++) {
+				if (g.numEdges(j,i) != g.numEdges(i, j)) {
+					System.err.println("Adding edge failed - Normal Reading");
+				}
+			}
+		}
+
 	}
 }

@@ -292,7 +292,7 @@ public class FactorPoly {
 		System.out.println("--" + py);
 		System.out.println("--" + p1);
 		System.out.println("--" + px);
-		p1.add(px);
+		p1.addnew(px);
 //		System.out.println(pyx);
 //		p1.times(px);
 		System.out.println("--" +py);
@@ -300,13 +300,4 @@ public class FactorPoly {
 		System.out.println("--" + px);
 //		System.out.println(py);
 	}
-	/*
-	 * template<class T> bstreambuf &operator<<(bstreambuf &bout, FactorPoly<T> const &fp) { bout << fp.nxterms; for( int i=0;i<fp.nxterms;++i) { bout
-	 * << fp.xterms[i]; } return bout; }
-	 * 
-	 * template<class T> bistream &operator>>(bistream &bin, FactorPoly<T> &fp) { int nxterms; bin >> nxterms; YTerms<T> *xterms = new
-	 * YTerms<T>[nxterms]; for( int i=0;i<nxterms;++i) { bin >> xterms[i]; } // I do the following swap trick to reduce // the number of copy
-	 * assignments FactorPoly<T> tmp(nxterms,xterms); fp.swap(tmp); return bin; }
-	 */
-
 }

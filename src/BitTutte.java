@@ -11,10 +11,14 @@ import java.util.Random;
 import java.util.Scanner;
 
 import polynomial.FactorPoly;
-import polynomial.Pair;
 import polynomial.X;
 import polynomial.Y;
+import selection.EdgeSelection;
+import selection.HeuristicCollection;
+import selection.RandomEdge;
+import util.Cache;
 import util.Debug;
+import util.Pair;
 import util.Triple;
 
 public class BitTutte {
@@ -36,13 +40,19 @@ public class BitTutte {
 	boolean reduce_multiedges = true;
 	boolean use_add_contract = false;
 	int split_threshold = 0;
+	private int smallGraphThreshold = 5;
+	Cache cache;
+
+	EdgeSelection edgeSelection;
 
 	public static void main(String[] args) {
+		BitTutte t;
 		if (args.length == 1) {
-			new BitTutte(args[0]);
+			t= new BitTutte(args[0]);
+			System.out.println(t.cache.statistics());
 		} else {
 			for (int i = 0; i < 100; i++) {
-				new BitTutte(null);
+				t= new BitTutte(null);
 			}
 		}
 	}
@@ -51,6 +61,8 @@ public class BitTutte {
 		global_timer = new MyTimer();
 		num_steps = 0;
 		num_cycles = 0;
+		cache = new Cache();
+		edgeSelection = new HeuristicCollection(HeuristicCollection.VERTEX_ORDER);
 
 		// Make a graph
 		int minVertex = 3;
@@ -68,26 +80,26 @@ public class BitTutte {
 				File f = new File(s);
 				Scanner scan = new Scanner(f);
 				scan.useDelimiter("[^0-9]+");
-				List<Pair<Integer,Integer>> l = new ArrayList<Pair<Integer,Integer>>();
-				Map<Integer,Integer> numbers = new HashMap<Integer,Integer>();
+				List<Pair<Integer, Integer>> l = new ArrayList<Pair<Integer, Integer>>();
+				Map<Integer, Integer> numbers = new HashMap<Integer, Integer>();
 				int count = 0;
-				while(scan.hasNext()){
+				while (scan.hasNext()) {
 					int from = scan.nextInt();
 					int to = scan.nextInt();
-					l.add(new Pair<Integer,Integer>(from,to));
-					if(!numbers.containsKey(from)){
-						numbers.put(from,count++);
+					l.add(new Pair<Integer, Integer>(from, to));
+					if (!numbers.containsKey(from)) {
+						numbers.put(from, count++);
 					}
-					if(!numbers.containsKey(to)){
-						numbers.put(to,count++);
+					if (!numbers.containsKey(to)) {
+						numbers.put(to, count++);
 					}
-					
+
 				}
 				g = new Graph(count);
-				for(Pair<Integer,Integer> i : l){
+				for (Pair<Integer, Integer> i : l) {
 					g.addEdge(numbers.get(i.first()), numbers.get(i.second()));
 				}
-//				return;
+				// return;
 			} catch (FileNotFoundException e) {
 				e.printStackTrace();
 			}
@@ -135,6 +147,14 @@ public class BitTutte {
 		// === 1. APPLY SIMPLIFICATIONS ===
 		FactorPoly RF = new FactorPoly(new Y(reduce_loops(graph)));
 		// System.out.println("Removing all loops to get " + RF.toString());
+
+		if (graph.numVertices() >= smallGraphThreshold && !graph.isMultitree()) {
+			FactorPoly r = cache.get(graph);
+			if (r != null) {
+				debug("Cache Hit!!");
+				return r.timesnew(RF);
+			}
+		}
 
 		FactorPoly poly;
 
@@ -199,7 +219,7 @@ public class BitTutte {
 			// === 4. PERFORM DELETE / CONTRACT ===
 
 			Graph g2 = new Graph(graph);
-			Triple<Integer, Integer, Integer> edge = select_edge(graph);
+			Triple<Integer, Integer, Integer> edge = edgeSelection.select_edge(graph, reduce_multiedges);
 
 			// System.out.println("---Picked Edge " + edge);
 			// now, delete/contract on the edge's endpoints
@@ -224,6 +244,10 @@ public class BitTutte {
 				debug("--returning");
 				poly.add(tutte(g2, rid));
 			}
+		}
+
+		if (graph.numVertices() >= smallGraphThreshold && !graph.isMultitree()) {
+			cache.add(graph, poly);
 		}
 
 		return poly.timesnew(RF);
@@ -317,47 +341,6 @@ public class BitTutte {
 			c += graph.removeAllEdges(i, i);
 		}
 		return c;
-	}
-
-	private Triple<Integer, Integer, Integer> select_edge(Graph graph) {
-		// assumes this graph is NOT a cycle and NOT a tree
-		int best = 0;
-		int rcount = 0;
-		int rtarget = 0;
-
-		Triple<Integer, Integer, Integer> r = new Triple<Integer, Integer, Integer>(-1, -1, -1);
-
-		int nedges = graph.numEdges();
-		rtarget = (int) (((double) nedges * Math.random()) / (1.0 + 1.0));
-
-		for (int i : graph.vertices()) {
-			int head = i;
-
-			for (Pair<Integer, Integer> j : graph.edges(i)) {
-				int tail = j.first();
-				int count = j.second();
-
-				if (head < tail) { // to avoid duplicates
-					int cost = 1;
-
-					if (rcount == rtarget) {
-						return new Triple<Integer, Integer, Integer>(head, tail, reduce_multiedges ? count : 1);
-					}
-					rcount += count;
-
-					if (cost > best) {
-						r = new Triple<Integer, Integer, Integer>(head, tail, reduce_multiedges ? count : 1);
-						best = cost;
-					}
-				}
-			}
-		}
-
-		if (best == 0) {
-			throw new RuntimeException("internal failure (select_edge)");
-		}
-
-		return r;
 	}
 
 	public void debug(Object s) {

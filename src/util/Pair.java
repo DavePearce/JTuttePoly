@@ -1,4 +1,4 @@
-package polynomial;
+package util;
 
 // This file is part of the Wyone automated theorem prover.
 //

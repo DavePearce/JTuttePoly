@@ -1,3 +1,4 @@
+import graph.Graph;
 import graph.SpanningGraph;
 
 import java.io.File;
@@ -304,7 +305,7 @@ public class Tutte {
 		return c;
 	}
 
-	private Triple<Integer, Integer, Integer> select_edge(SpanningGraph graph) {
+	private  Triple<Integer, Integer, Integer> select_edge(SpanningGraph graph) {
 		// assumes this graph is NOT a cycle and NOT a tree
 		int best = 0;
 		int rcount = 0;
@@ -344,6 +345,5 @@ public class Tutte {
 
 		return r;
 	}
-
 
 }
