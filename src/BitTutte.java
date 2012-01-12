@@ -48,11 +48,11 @@ public class BitTutte {
 	public static void main(String[] args) {
 		BitTutte t;
 		if (args.length == 1) {
-			t= new BitTutte(args[0]);
-			System.out.println(t.cache.statistics());
+			t = new BitTutte(args[0]);
+			 System.err.println(t.cache.statistics());
 		} else {
 			for (int i = 0; i < 100; i++) {
-				t= new BitTutte(null);
+				t = new BitTutte(null);
 			}
 		}
 	}
@@ -152,10 +152,10 @@ public class BitTutte {
 			FactorPoly r = cache.get(graph);
 			if (r != null) {
 				debug("Cache Hit!!");
-//				return r.timesnew(RF);
+				return r.timesnew(RF);
 			}
 		}
-
+		Graph cacheEntry = new Graph(graph);
 		FactorPoly poly;
 
 		// === 3. CHECK FOR ARTICULATIONS, DISCONNECTS AND/OR TREES ===
@@ -171,7 +171,8 @@ public class BitTutte {
 			List<Graph> biconnects = new ArrayList<Graph>();
 			graph.extractBiconnectedComponents(biconnects);
 
-			debug("--- Bridge --- " + biconnects.size());
+			debug("--- Biconnected --- " + biconnects.size());
+
 
 			// figure out how many tree ids I need
 			int tid = tree_id;
@@ -247,22 +248,32 @@ public class BitTutte {
 		}
 
 		if (graph.numVertices() >= smallGraphThreshold && !graph.isMultitree()) {
-			cache.add(graph, poly);
+			cache.add(cacheEntry, poly);
 		}
+
+		// if(CACHELOOK != null && !CACHELOOK.toString().equals(poly.toString())){
+		// System.out.println(graph);
+		// System.out.println("Cache: " + CACHELOOK.toString());
+		// System.out.println("Computed: " + poly.toString());
+		// System.out.println(poly.toString().equals((new FactorPoly(poly)).toString()));
+		// throw new RuntimeException("Cached value was wrong!!!");
+		// }
 
 		return poly.timesnew(RF);
 	}
 
-	// private FactorPoly reduce_pendant(int p, Graph graph) {
-	// int count = graph.numEdges(p);
-	// graph.remove(p);
-	//
-	// FactorPoly r = new FactorPoly(new X(1));
-	// if (count > 1) {
-	// r.add(new Y(1, count - 1));
-	// }
-	// return r;
-	// }
+	
+	//Depricated by reducing not biconnected things
+//	private FactorPoly reduce_pendant(int p, Graph graph) {
+//		int count = graph.numEdges(p);
+//		graph.clear(p);
+//
+//		FactorPoly r = new FactorPoly(new X(1));
+//		if (count > 1) {
+//			r.add(new Y(1, count - 1));
+//		}
+//		return r;
+//	}
 
 	private FactorPoly reduce_tree(FactorPoly X_p, Graph graph) {
 		FactorPoly r = new FactorPoly(new Y(0)); // new polymial "1"

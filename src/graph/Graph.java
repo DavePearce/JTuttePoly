@@ -228,8 +228,29 @@ public class Graph {
 			}
 		}
 	}
+	
+	/**
+	 * Remove the vertex and all associated edges
+	 * @param vertex The vertex to remove
+	 */
+	public void clear(int vertex){
+		graph.clear(vertex);
+	}
+	
+	/**
+	 * Returns a pendant vertex
+	 * @return Pendant Vertex or -1
+	 */
+	public int pendant(){
+		for(int i : vertices()){
+			if(numUnderlyingEdges(i) == 1){
+				return i;
+			}
+		}
+		return -1;
+	}
 
-	private int numEdges(int vertex) {
+	public int numEdges(int vertex) {
 		return graph.numEdges(vertex);
 	}
 	

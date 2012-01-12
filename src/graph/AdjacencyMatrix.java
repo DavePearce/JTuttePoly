@@ -98,19 +98,12 @@ public class AdjacencyMatrix {
 	}
 
 	public boolean equals(AdjacencyMatrix a) {
-		if (a.domainSize != this.domainSize) {
-			return false;
-		}
 		if (a.numEdges != this.numEdges) {
 			return false;
 		}
 		if (a.numMultiEdges != this.numMultiEdges) {
 			return false;
 		}
-		if (a.edges.length != this.edges.length) {
-			return false;
-		}
-
 		for (int i = 0; i < this.edges.length; i++) {
 			if (this.edges[i] != a.edges[i]) {
 				return false;

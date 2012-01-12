@@ -173,11 +173,6 @@ public class SpanningGraph {
 		checkBiConnectivity();
 	}
 
-	public void simpleContractEdge(Triple<Integer, Integer, Integer> edge) {
-		graph.removeEdge(edge.first, edge.second, edge.third);
-		graph.simpleContractEdge(edge.first, edge.second);
-		checkBiConnectivity();
-	}
 
 	public void contractLine(List<Triple<Integer, Integer, Integer>> line) {
 		if (line.size() == 1) {
@@ -192,19 +187,6 @@ public class SpanningGraph {
 		checkBiConnectivity();
 	}
 
-	public void simpleContractLine(List<Triple<Integer, Integer, Integer>> line) {
-		if (line.size() == 1) {
-			graph.removeEdge(line.get(0).first, line.get(0).second, line.get(0).third);
-		} else {
-			// now, remove all internal vertices
-			for (int i = 0; i != line.size() - 1; ++i) {
-				graph.remove(line.get(i).second);
-			}
-		}
-		graph.simpleContractEdge(line.get(0).first, line.get(line.size() - 1).second);
-		// don't need to check biconnectivity here!
-		checkBiConnectivity();
-	}
 
 	static BCDat datae = new BCDat();
 

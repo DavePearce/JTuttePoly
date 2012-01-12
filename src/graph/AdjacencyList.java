@@ -273,24 +273,11 @@ public class AdjacencyList  {
 				addEdge(from, i.getKey(), i.getValue());
 			}
 		}
+		removeEdge(from, from, 1);
 		remove(to);
 	}
 
-	// Ok, this implementation is seriously inefficient!
-	// could use an indirection trick here as one solution?
-	//
-	// POST: vertex 'from' remains, whilst vertex 'to' is removed
-	public void simpleContractEdge(int from, int to) {
-		if (from == to) {
-			throw new RuntimeException("cannot contract a loop!");
-		}
-		for (Map.Entry<Integer, Integer> i : edges.get(to).entrySet()) {
-			if (from != i.getKey() && numEdges(from, i.getKey()) == 0) {
-				addEdge(from, i.getKey(), 1);
-			}
-		}
-		remove(to);
-	}
+
 
 	public String toString() {
 		StringBuilder ss = new StringBuilder();
