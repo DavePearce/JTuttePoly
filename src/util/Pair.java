@@ -1,5 +1,7 @@
 package util;
 
+import java.util.Comparator;
+
 // This file is part of the Wyone automated theorem prover.
 //
 // Wyone is free software; you can redistribute it and/or modify 
@@ -27,7 +29,7 @@ package util;
  * @param <SECOND>
  *            Type of second item
  */
-public class Pair<FIRST, SECOND> {
+public class Pair<FIRST extends Comparable<FIRST>, SECOND extends Comparable<SECOND>> implements Comparable<Pair<FIRST, SECOND>> {
 	private final FIRST first;
 	private final SECOND second;
 
@@ -58,7 +60,7 @@ public class Pair<FIRST, SECOND> {
 			if (first != null) {
 				r = first.equals(p.first());
 			} else {
-				r = p.first() == first;
+				r = (p.first() == first);
 			}
 			if (second != null) {
 				r &= second.equals(p.second());
@@ -74,5 +76,49 @@ public class Pair<FIRST, SECOND> {
 		String fstr = first != null ? first.toString() : "null";
 		String sstr = second != null ? second.toString() : "null";
 		return "(" + fstr + ", " + sstr + ")";
+	}
+
+	public static class MaximizeSecondComparator implements Comparator<Pair<Integer, Integer>> {
+
+		@Override
+		public int compare(Pair<Integer, Integer> o1, Pair<Integer, Integer> o2) {
+			return o1.second - o2.second;
+		}
+
+	}
+
+	public static class MinimizeSecondComparator implements Comparator<Pair<Integer, Integer>> {
+
+		@Override
+		public int compare(Pair<Integer, Integer> o1, Pair<Integer, Integer> o2) {
+			return o2.second - o1.second;
+		}
+
+	}
+
+	@Override
+	public int compareTo(Pair<FIRST, SECOND> o) {
+		int c;
+		if (o.first != null || this.first != null) {
+			if (o.first != null) {
+				c = o.first.compareTo(this.first);
+			} else {
+				c = this.first.compareTo(o.first);
+			}
+			if (c != 0) {
+				return c;
+			}
+		}
+		
+		if(this.second != null || o.second != null ){
+			if(this.second != null){
+				c = this.second.compareTo(o.second);
+			}else{
+				c = o.second.compareTo(this.second);
+			}
+		}else{
+			c = 0;
+		}
+		return c;
 	}
 }

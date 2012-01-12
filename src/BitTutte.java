@@ -3,25 +3,36 @@ import graph.Graph;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Scanner;
+import java.util.Set;
+import java.util.TreeSet;
 
 import polynomial.FactorPoly;
 import polynomial.X;
 import polynomial.Y;
 import selection.EdgeSelection;
 import selection.HeuristicCollection;
-import selection.RandomEdge;
 import util.Cache;
 import util.Debug;
 import util.Pair;
 import util.Triple;
 
 public class BitTutte {
+
+	public static final int V_RANDOM = 0;
+	public static final int V_MINIMISE_UNDERLYING_DEGREE = 1;
+	public static final int V_MAXIMISE_UNDERLYING_DEGREE = 2;
+	public static final int V_MINIMISE_DEGREE = 3;
+	public static final int V_MAXIMISE_DEGREE = 4;
+	public static final int V_BFS = 5;
+	public static final int V_NONE = 6;
+
 	MyTimer global_timer;
 	boolean status_flag;
 	boolean write_tree;
@@ -49,7 +60,7 @@ public class BitTutte {
 		BitTutte t;
 		if (args.length == 1) {
 			t = new BitTutte(args[0]);
-			 System.err.println(t.cache.statistics());
+			System.err.println(t.cache.statistics());
 		} else {
 			for (int i = 0; i < 100; i++) {
 				t = new BitTutte(null);
@@ -96,10 +107,8 @@ public class BitTutte {
 
 				}
 				g = new Graph(count);
-				for (Pair<Integer, Integer> i : l) {
-					g.addEdge(numbers.get(i.first()), numbers.get(i.second()));
-				}
-				// return;
+				orderVertices(g, l, numbers, V_MAXIMISE_DEGREE);
+
 			} catch (FileNotFoundException e) {
 				e.printStackTrace();
 			}
@@ -139,6 +148,78 @@ public class BitTutte {
 
 	}
 
+	/**
+	 * Make the graph, but give the vertex labels some meaning
+	 * Both the graph g and Map numbers will be modified
+	 * 
+	 * @param g The graph to populate
+	 * @param l List of edges
+	 * @param numbers Mapping of vertices to the smallest domain possible
+	 * @param vertexHeuristic ordering heuristic to use
+	 * @return Graph g with all the vertices added. 
+	 */
+	private Graph orderVertices(Graph g, List<Pair<Integer, Integer>> l, Map<Integer, Integer> numbers, int vertexHeuristic) {
+		//TODO UNTESTED
+		List<Pair<Integer, Integer>> counts = new ArrayList<Pair<Integer, Integer>>();
+		for (Integer i : numbers.keySet()) {
+			counts.add(new Pair<Integer, Integer>(i, 0));
+		}
+		Set<Pair<Integer, Integer>> underlyingEdges;
+		switch (vertexHeuristic) {
+		case V_RANDOM:
+			for (int i = 0; i < counts.size(); i++) {
+				counts.set(i, new Pair<Integer, Integer>(counts.get(i).first(), (int) (Math.random() * 2000)));
+			}
+			Collections.sort(counts, new Pair.MaximizeSecondComparator());
+			break;
+		case V_MINIMISE_UNDERLYING_DEGREE:
+			underlyingEdges = new TreeSet<Pair<Integer, Integer>>(l);
+			for (Pair<Integer, Integer> i : underlyingEdges) {
+				counts.set(numbers.get(i.first()), new Pair<Integer, Integer>(i.first(), counts.get(numbers.get(i.first())).second() + 1));
+				counts.set(numbers.get(i.second()), new Pair<Integer, Integer>(i.second(), counts.get(numbers.get(i.second())).second() + 1));
+			}
+			Collections.sort(counts, new Pair.MinimizeSecondComparator());
+			break;
+		case V_MAXIMISE_UNDERLYING_DEGREE:
+			underlyingEdges = new TreeSet<Pair<Integer, Integer>>(l);
+			for (Pair<Integer, Integer> i : underlyingEdges) {
+				counts.set(numbers.get(i.first()), new Pair<Integer, Integer>(i.first(), counts.get(numbers.get(i.first())).second() + 1));
+				counts.set(numbers.get(i.second()), new Pair<Integer, Integer>(i.second(), counts.get(numbers.get(i.second())).second() + 1));
+			}
+			Collections.sort(counts, new Pair.MaximizeSecondComparator());
+			break;
+		case V_MINIMISE_DEGREE:
+			for (Pair<Integer, Integer> i : l) {
+				counts.set(numbers.get(i.first()), new Pair<Integer, Integer>(i.first(), counts.get(numbers.get(i.first())).second() + 1));
+				counts.set(numbers.get(i.second()), new Pair<Integer, Integer>(i.second(), counts.get(numbers.get(i.second())).second() + 1));
+			}
+			Collections.sort(counts, new Pair.MinimizeSecondComparator());
+			break;
+		case V_MAXIMISE_DEGREE:
+			for (Pair<Integer, Integer> i : l) {
+				counts.set(numbers.get(i.first()), new Pair<Integer, Integer>(i.first(), counts.get(numbers.get(i.first())).second() + 1));
+				counts.set(numbers.get(i.second()), new Pair<Integer, Integer>(i.second(), counts.get(numbers.get(i.second())).second() + 1));
+			}
+			Collections.sort(counts, new Pair.MaximizeSecondComparator());
+			break;
+		case V_BFS:
+		case V_NONE:
+			// just do nothing
+		default:
+			break;
+		}
+		
+		for(int i = 0; i < counts.size();i++){
+			numbers.put(counts.get(i).first(), i);
+		}
+
+		for (Pair<Integer, Integer> i : l) {
+			g.addEdge(numbers.get(i.first()), numbers.get(i.second()));
+		}
+
+		return null;
+	}
+
 	private FactorPoly tutte(Graph graph, int mid) {
 		num_steps++;
 
@@ -172,7 +253,6 @@ public class BitTutte {
 			graph.extractBiconnectedComponents(biconnects);
 
 			debug("--- Biconnected --- " + biconnects.size());
-
 
 			// figure out how many tree ids I need
 			int tid = tree_id;
@@ -262,18 +342,17 @@ public class BitTutte {
 		return poly.timesnew(RF);
 	}
 
-	
-	//Depricated by reducing not biconnected things
-//	private FactorPoly reduce_pendant(int p, Graph graph) {
-//		int count = graph.numEdges(p);
-//		graph.clear(p);
-//
-//		FactorPoly r = new FactorPoly(new X(1));
-//		if (count > 1) {
-//			r.add(new Y(1, count - 1));
-//		}
-//		return r;
-//	}
+	// Depricated by reducing not biconnected things
+	// private FactorPoly reduce_pendant(int p, Graph graph) {
+	// int count = graph.numEdges(p);
+	// graph.clear(p);
+	//
+	// FactorPoly r = new FactorPoly(new X(1));
+	// if (count > 1) {
+	// r.add(new Y(1, count - 1));
+	// }
+	// return r;
+	// }
 
 	private FactorPoly reduce_tree(FactorPoly X_p, Graph graph) {
 		FactorPoly r = new FactorPoly(new Y(0)); // new polymial "1"
