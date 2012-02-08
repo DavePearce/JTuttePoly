@@ -278,6 +278,10 @@ public class Graph {
 		}
 		return false;
 	}
+
+	public int numUnderlyingEdges(int v, int i) {
+		return graph.numEdges(v, i) > 0? 1 : 0;
+	}
 	
 	
 }
