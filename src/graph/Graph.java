@@ -317,6 +317,10 @@ public class Graph {
 	public int numUnderlyingEdges(int v, int i) {
 		return graph.numEdges(v, i) > 0 ? 1 : 0;
 	}
+	
+	public int domainSize(){
+		return graph.domainSize();
+	}
 
 	public int numEdges(int v, int i) {
 		return graph.numEdges(v, i);

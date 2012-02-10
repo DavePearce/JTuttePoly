@@ -3,8 +3,8 @@ package util;
 public class Label {
 	int[] to,from;
 	
-	public Label(int size){
-		to = new int[size];
+	public Label(int size, int domain){
+		to = new int[domain];
 		from = new int[size];
 	}
 	
@@ -19,6 +19,18 @@ public class Label {
 	
 	public int newName(int oldName){
 		return to[oldName];
+	}
+	
+	public String toString(){
+		StringBuilder ss = new StringBuilder();
+		for(int i=0;i<from.length;i++){
+			ss.append(from[i]);
+			ss.append(" -> ");
+			ss.append(i);
+			ss.append("\n");
+		}
+		
+		return ss.toString();
 	}
 	
 }

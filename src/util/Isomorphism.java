@@ -3,8 +3,11 @@ package util;
 import graph.Graph;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -27,25 +30,24 @@ public class Isomorphism {
 		List<Set<Integer>> alpha = new ArrayList<Set<Integer>>();
 		unitpart.add(cell);
 		alpha.add(cell);
-		
-		List<Set<Integer>> partition = equitableRefinement(g,unitpart,alpha);
-//		print(partition, null);
+
+		List<Set<Integer>> partition = equitableRefinement(g, unitpart, alpha);
+//		 print(partition, null);
 
 		Triple<List<Set<Integer>>, int[], Label> resultTriple = searchTree(g, partition, null);
-		
-//		System.out.println();
-//		print(resultTriple.first, resultTriple.second);
+
+		// System.out.println();
+		// print(resultTriple.first, resultTriple.second);
 		return resultTriple.third;
 	}
 
 	private static Triple<List<Set<Integer>>, int[], Label> searchTree(Graph g, List<Set<Integer>> partition,
 			Triple<List<Set<Integer>>, int[], Label> soFar) {
 		if (discrete(partition)) {
+			Label label = partitionToLabel(partition, g.domainSize());
 			if (soFar == null) {
-				Label label = partitionToLabel(partition);
 				return new Triple<List<Set<Integer>>, int[], Label>(partition, partitionToValue(partition, g, label), label);
 			} else {
-				Label label = partitionToLabel(partition);
 				int[] value = partitionToValue(partition, g, label);
 				if (greaterThan(value, soFar.second)) {
 					return new Triple<List<Set<Integer>>, int[], Label>(partition, value, label);
@@ -85,20 +87,19 @@ public class Isomorphism {
 				newPartition.add(partition.get(j));
 			}
 
-			//Now you need to do the equitable refinement again
+			// Now you need to do the equitable refinement again
 			List<Set<Integer>> alpha = new ArrayList<Set<Integer>>();
 			alpha.add(u);
-			newPartition = equitableRefinement(g, newPartition,alpha);
-			
-			
-//			if (discrete(newPartition)) {
-//				Label label = partitionToLabel(newPartition);
-//				int[] value = partitionToValue(newPartition, g, label);
-//				print(newPartition, value);
-//			} else {
-//				print(newPartition, null);
-//			}
-			
+			newPartition = equitableRefinement(g, newPartition, alpha);
+
+			// if (discrete(newPartition)) {
+			// Label label = partitionToLabel(newPartition);
+			// int[] value = partitionToValue(newPartition, g, label);
+			// print(newPartition, value);
+			// } else {
+			// print(newPartition, null);
+			// }
+
 			current = searchTree(g, newPartition, current);
 
 		}
@@ -110,22 +111,22 @@ public class Isomorphism {
 		for (int i = 0; i < value.length; i++) {
 			if (greaterthan(0xFFFFFFFFL & value[i], 0xFFFFFFFFL & second[i])) {
 				return true;
-			} else if (lessthan(0xFFFFFFFFL & value[i],0xFFFFFFFFL & second[i])) {
+			} else if (lessthan(0xFFFFFFFFL & value[i], 0xFFFFFFFFL & second[i])) {
 				return false;
 			}
 		}
 		return false;
 	}
 
-	private static boolean greaterthan(long i, long j){
+	private static boolean greaterthan(long i, long j) {
 		return i > j;
 	}
-	
-	private static boolean lessthan(long i, long j){
-		return i<j;
+
+	private static boolean lessthan(long i, long j) {
+		return i < j;
 	}
-	
-	private  static List<Set<Integer>> equitableRefinement(Graph g, List<Set<Integer>> partition, List<Set<Integer>> alpha) {
+
+	private static List<Set<Integer>> equitableRefinement(Graph g, List<Set<Integer>> partition, List<Set<Integer>> alpha) {
 
 		// McKay's Algorithm
 		int m = 0, M = 0;
@@ -134,12 +135,15 @@ public class Isomorphism {
 			Set<Integer> W = alpha.get(m);
 			m = m + 1;
 			int k = 0;
-			int r = partition.size();
 
-			while (k < r) {
+			while (k < partition.size()) {
 
 				// Define a new set of partitions
 				Set<Integer> Vk = partition.get(k);
+				if(Vk.size() == 1){
+					k = k+1;
+					continue;
+				}
 				List<Set<Integer>> X = new ArrayList<Set<Integer>>();
 				place: for (int x : Vk) {
 					if (X.isEmpty()) {
@@ -207,7 +211,7 @@ public class Isomorphism {
 					insert(k, X.get(i), partition);
 				}
 
-				k = k + 1;
+				k = k + X.size();
 			}
 
 		}
@@ -227,7 +231,7 @@ public class Isomorphism {
 	private static int d(int v, Set<Integer> W, Graph g) {
 		int d = 0;
 		for (int i : W) {
-			d += g.numUnderlyingEdges(v, i);
+			d += g.numEdges(v, i);
 		}
 
 		return d;
@@ -266,7 +270,7 @@ public class Isomorphism {
 		System.out.print("] ");
 
 		if (value != null) {
-			for(int i: value){
+			for (int i : value) {
 				System.out.printf("%08X", i);
 			}
 		}
@@ -274,8 +278,8 @@ public class Isomorphism {
 
 	}
 
-	private static Label partitionToLabel(List<Set<Integer>> partition) {
-		Label l = new Label(partition.size());
+	private static Label partitionToLabel(List<Set<Integer>> partition, int domain) {
+		Label l = new Label(partition.size(), domain);
 		for (int i = 0; i < partition.size(); i++) {
 			l.set(partition.get(i).iterator().next(), i);
 		}
@@ -298,7 +302,8 @@ public class Isomorphism {
 	}
 
 	private static void setBit(int[] arr, int w, int i, int j, int v) {
-		if(v == 0) return;
+		if (v == 0)
+			return;
 		int place = i + j * w;
 		int idx = place / 32;
 		int bit = place % 32;
@@ -308,28 +313,65 @@ public class Isomorphism {
 	}
 
 	public static void main(String args[]) {
-		Graph g = new Graph(9);
-		g.addEdge(0, 1);
-		g.addEdge(2, 1);
-		g.addEdge(0, 3);
-		g.addEdge(4, 1);
-		g.addEdge(2, 5);
-		g.addEdge(3, 4);
-		g.addEdge(5, 4);
-		g.addEdge(3, 6);
-		g.addEdge(4, 7);
-		g.addEdge(8, 5);
-		g.addEdge(6, 7);
-		g.addEdge(7, 8);
+		 long start = System.currentTimeMillis();
 
-		long start = System.currentTimeMillis();
-		Label l = canonicalLabel(g);
-		long end = System.currentTimeMillis();
-		System.out.printf("%.2fs\n",(end - start)/ 1000.0);
-		
-//		System.out.println();
-//		for (int i = 0; i < g.numVertices(); i++) {
-//			System.out.println(i + " -> " + l.newName(i));
+//		while (System.currentTimeMillis()-start < 60000) {
+			Random r = new Random();
+			long seed = -8891217190495997596L ; r.nextLong();
+//			System.out.println("seed: " + seed);
+
+			r.setSeed(seed);
+
+			int numEdges = r.nextInt(30) + 5;
+			int numVertices = r.nextInt(10) + 5;
+
+			List<Pair<Integer, Integer>> edges = new ArrayList<Pair<Integer, Integer>>();
+			for (int i = 0; i < numEdges; i++) {
+				edges.add(new Pair<Integer, Integer>(r.nextInt(numVertices), r.nextInt(numVertices)));
+			}
+
+			Graph g = new Graph(numVertices);
+			for (Pair<Integer, Integer> e : edges) {
+				g.addEdge(e.first(), e.second());
+			}
+
+			for (int i = 0; i < 10; i++) {
+				Graph g2 = new Graph(numVertices);
+
+				// Shuffle
+				Map<Integer, Integer> shuffle = new HashMap<Integer, Integer>();
+				List<Integer> vertices = new ArrayList<Integer>();
+
+				for (int v = 0; v < numVertices; v++) {
+					vertices.add(v);
+				}
+
+				for (int v = 0; v < numVertices; v++) {
+					shuffle.put(v, vertices.remove(r.nextInt(vertices.size())));
+				}
+
+				for (Pair<Integer, Integer> e : edges) {
+					g2.addEdge(shuffle.get(e.first()), shuffle.get(e.second()));
+				}
+
+				if (!g.equals(g2) || !g2.equals(g)) {
+					System.out.println("FAIL");
+					System.out.println("Seed: " + seed + "L");
+					System.out.println("Iteration: " + i);
+					System.out.println("# Vertices: " +  numVertices);
+					System.out.println("# Edges: " + numEdges);
+					return;
+				}
+
+			}
 //		}
+		// Label l = canonicalLabel(g);
+		// long end = System.currentTimeMillis();
+		// System.out.printf("%.2fs\n", (end - start) / 1000.0);
+
+		// System.out.println();
+		// for (int i = 0; i < g.numVertices(); i++) {
+		// System.out.println(i + " -> " + l.newName(i));
+		// }
 	}
 }
