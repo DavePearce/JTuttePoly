@@ -1,10 +1,9 @@
 package graph;
 
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
+import util.Isomorphism;
+import util.Label;
 import util.Pair;
 import util.Triple;
 
@@ -13,7 +12,7 @@ public class Graph {
 	private AdjacencyMatrix graph;
 	private int nartics;
 	private int ncomponents;
-	
+	private Label label;
 
 	public Graph(int i) {
 		graph = new AdjacencyMatrix(i);
@@ -27,52 +26,55 @@ public class Graph {
 		ncomponents = 0;
 		checkBiConnectivity();
 	}
-	
+
 	public Graph(Graph g) {
 		this(g.graph);
 	}
-	
+
 	public void addEdge(int from, int to) {
 		addEdge(from, to, 1);
 	}
 
 	public void addEdge(int from, int to, int count) {
+		label = null;
 		graph.addEdge(from, to, count);
 		checkBiConnectivity();
 	}
-	
+
 	public Iterable<Integer> vertices() {
 		return graph.vertices();
 	}
-	
+
 	public int removeAllEdges(int from, int to) {
+		label = null;
 		int r = graph.removeAllEdges(from, to);
 		if (r > 0 && from != to) {
 			checkBiConnectivity();
 		}
 		return r;
 	}
-	
-	
+
 	public int numEdges() {
 		return graph.numEdges();
 	}
-	
+
 	public boolean isMulticycle() {
 		return nartics == 1 && graph.numUnderlyingEdges() == graph.numVertices();
 	}
-	
+
 	public Iterable<Pair<Integer, Integer>> edges(int v) {
 		return graph.edges(v);
 	}
-	
+
 	public void contractEdge(Triple<Integer, Integer, Integer> edge) {
+		label = null;
 		graph.removeEdge(edge.first, edge.second, edge.third);
 		graph.contractEdge(edge.first, edge.second);
 		checkBiConnectivity();
 	}
-	
+
 	public boolean removeEdge(Triple<Integer, Integer, Integer> e) {
+		label = null;
 		if (graph.removeEdge(e.first, e.second, e.third)) {
 			if (e.first != e.second) {
 				// by removing an edge, we may have disconnected the
@@ -83,12 +85,13 @@ public class Graph {
 		}
 		return false;
 	}
-	
+
 	public boolean isMultitree() {
 		return graph.numUnderlyingEdges() < graph.numVertices();
 	}
-	
+
 	public void removeGraphs(List<Graph> graphs) {
+		label = null;
 		// finally, remove all edges present in the biconnects
 		// how could this be optimised a little?
 		for (int i = 0; i != graphs.size(); ++i) {
@@ -105,7 +108,7 @@ public class Graph {
 	public boolean isBiconnected() {
 		return ncomponents == 1 && nartics == 1;
 	}
-	
+
 	private BCDat datae = new BCDat();
 
 	public void extractBiconnectedComponents(List<Graph> bcs) { // was retree
@@ -117,14 +120,13 @@ public class Graph {
 		for (int i : graph.vertices()) {
 			if (!datae.visited.get(i)) {
 				// dfs search to identify component roots
-//				System.out.println("DEBUG --- Going in the loop");
+				// System.out.println("DEBUG --- Going in the loop");
 				extract_biconnects(i, i, bcs, datae);
 			}
 		}
-//		System.out.println("DEGUG --- " + bcs.size());
+		// System.out.println("DEGUG --- " + bcs.size());
 	}
-	
-	
+
 	private void extract_biconnects(int u, int v, List<Graph> bcs, BCDat data) {
 		// traverse edge tail->head
 		data.dfsnum.set(v, data.vindex);
@@ -133,23 +135,23 @@ public class Graph {
 		// now, consider edges
 		for (Pair<Integer, Integer> i : graph.edges(v)) {
 			int w = i.first();
-//			System.out.println("DEBUG --- First Inner loop " + w + " " + v);
+			// System.out.println("DEBUG --- First Inner loop " + w + " " + v);
 			Triple<Integer, Integer, Integer> e = new Triple<Integer, Integer, Integer>(v, w, i.second());
 
 			if (!data.visited.get(w)) {
-//				System.out.println("DEBUG --- Second inner loop");
+				// System.out.println("DEBUG --- Second inner loop");
 				data.cstack.add(e);
 				extract_biconnects(v, w, bcs, data);
 				data.lowlink.set(v, Math.min(data.lowlink.get(v), data.lowlink.get(w)));
 				if (data.lowlink.get(w) == data.dfsnum.get(v)) {
-//					System.out.println("DEBUG -- Adding to list");
+					// System.out.println("DEBUG -- Adding to list");
 					// v is an articulation point separating
 					// the component containing w from others.
 					bcs.add(extract_biconnect(e, data));
 				} else if (data.lowlink.get(w) > data.dfsnum.get(v)) {
 					// v is not in a biconnected component with w
 					data.cstack.remove(data.cstack.size() - 1);
-//					System.out.println("DEBUG --- Removing from cstack");
+					// System.out.println("DEBUG --- Removing from cstack");
 				}
 			} else if (w != u && data.dfsnum.get(v) > data.dfsnum.get(w)) {
 				// this is a back edge ...
@@ -185,8 +187,9 @@ public class Graph {
 
 		return g;
 	}
-	
-	private BCDat datac = new BCDat();	
+
+	private BCDat datac = new BCDat();
+
 	private void checkBiConnectivity() { // was retree
 		// reset visited information
 
@@ -204,7 +207,7 @@ public class Graph {
 			}
 		}
 	}
-	
+
 	private void biconnect(int u, int v, BCDat data) {
 		// traverse edge tail->head
 		data.dfsnum.set(v, data.vindex);
@@ -230,22 +233,26 @@ public class Graph {
 			}
 		}
 	}
-	
+
 	/**
 	 * Remove the vertex and all associated edges
-	 * @param vertex The vertex to remove
+	 * 
+	 * @param vertex
+	 *            The vertex to remove
 	 */
-	public void clear(int vertex){
+	public void clear(int vertex) {
+		label = null;
 		graph.clear(vertex);
 	}
-	
+
 	/**
 	 * Returns a pendant vertex
+	 * 
 	 * @return Pendant Vertex or -1
 	 */
-	public int pendant(){
-		for(int i : vertices()){
-			if(numUnderlyingEdges(i) == 1){
+	public int pendant() {
+		for (int i : vertices()) {
+			if (numUnderlyingEdges(i) == 1) {
 				return i;
 			}
 		}
@@ -255,36 +262,63 @@ public class Graph {
 	public int numEdges(int vertex) {
 		return graph.numEdges(vertex);
 	}
-	
-	public int numUnderlyingEdges(int vertex){
+
+	public int numUnderlyingEdges(int vertex) {
 		return graph.numUnderlyingEdges(vertex);
 	}
-	
-	public String toString(){
+
+	public String toString() {
 		return graph.toString();
 	}
-	
-	public int numVertices(){
+
+	public int numVertices() {
 		return graph.numVertices();
 	}
-	
-	public int hashCode(){
+
+	public int hashCode() {
 		return graph.hashCode();
 	}
-	
-	public boolean equals(Object o){
-		if(o instanceof Graph){
-			return this.graph.equals(((Graph) o).graph);
+
+	public boolean equals(Object o) {
+		if (o instanceof Graph) {
+			// return this.graph.equals(((Graph) o).graph);
+			Graph g = (Graph) o;
+
+			if (g.numEdges() != this.numEdges()) {
+				return false;
+			}
+			if (g.graph.numMultiedges() != this.graph.numMultiedges()) {
+				return false;
+			}
+
+			if (this.label == null) {
+				this.label = Isomorphism.canonicalLabel(this);
+			}
+			if (g.label == null) {
+				g.label = Isomorphism.canonicalLabel(g);
+			}
+
+			for (int i = 0; i < this.numVertices(); i++) {
+				for (int j = 0; j < this.numVertices(); j++) {
+					if (j >= i) {
+						int myEdges = this.numEdges(this.label.oldName(i), this.label.oldName(j));
+						int gEdges = g.numEdges(g.label.oldName(i), g.label.oldName(j));
+						if (myEdges != gEdges) {
+							return false;
+						}
+					}
+				}
+			}
+			return true;
 		}
 		return false;
 	}
 
 	public int numUnderlyingEdges(int v, int i) {
-		return graph.numEdges(v, i) > 0? 1 : 0;
+		return graph.numEdges(v, i) > 0 ? 1 : 0;
 	}
-	
-	
+
+	public int numEdges(int v, int i) {
+		return graph.numEdges(v, i);
+	}
 }
-	
-	
-	
