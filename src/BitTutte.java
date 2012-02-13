@@ -107,7 +107,7 @@ public class BitTutte {
 
 				}
 				g = new Graph(count);
-				orderVertices(g, l, numbers, V_MAXIMISE_DEGREE);
+				g= orderVertices(g, l, numbers, V_MAXIMISE_UNDERLYING_DEGREE);
 
 			} catch (FileNotFoundException e) {
 				e.printStackTrace();
@@ -217,7 +217,7 @@ public class BitTutte {
 			g.addEdge(numbers.get(i.first()), numbers.get(i.second()));
 		}
 
-		return null;
+		return g;
 	}
 
 	private FactorPoly tutte(Graph graph, int mid) {
