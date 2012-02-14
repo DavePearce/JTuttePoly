@@ -107,7 +107,7 @@ public class BitTutte {
 
 				}
 				g = new Graph(count);
-				g= orderVertices(g, l, numbers, V_MAXIMISE_UNDERLYING_DEGREE);
+				g= orderVertices(g, l, numbers, V_MINIMISE_DEGREE);
 
 			} catch (FileNotFoundException e) {
 				e.printStackTrace();

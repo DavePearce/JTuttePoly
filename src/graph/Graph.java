@@ -12,7 +12,7 @@ public class Graph {
 	private AdjacencyMatrix graph;
 	private int nartics;
 	private int ncomponents;
-	private Label label;
+	private int[] label;
 
 	public Graph(int i) {
 		graph = new AdjacencyMatrix(i);
@@ -275,8 +275,15 @@ public class Graph {
 		return graph.numVertices();
 	}
 
+	public int[] label(Label l){
+		return graph.label(l);
+	}
+	
 	public int hashCode() {
-		return graph.hashCode();
+		if(label == null){
+			this.label = Isomorphism.canonicalLabel(this);
+		}
+		return graph.hashCode(label);
 	}
 
 	public boolean equals(Object o) {
@@ -298,16 +305,12 @@ public class Graph {
 				g.label = Isomorphism.canonicalLabel(g);
 			}
 
-			for (int i = 0; i < this.numVertices(); i++) {
-				for (int j = 0; j < this.numVertices(); j++) {
-					if (j >= i) {
-						int myEdges = this.numEdges(this.label.oldName(i), this.label.oldName(j));
-						int gEdges = g.numEdges(g.label.oldName(i), g.label.oldName(j));
+			for (int i = 0; i < g.label.length; i++) {
+						int myEdges = this.label[i];
+						int gEdges = g.label[i];
 						if (myEdges != gEdges) {
 							return false;
 						}
-					}
-				}
 			}
 			return true;
 		}

@@ -3,6 +3,7 @@ package graph;
 import java.util.Iterator;
 
 import util.Debug;
+import util.Label;
 import util.Pair;
 
 public class AdjacencyMatrix {
@@ -260,38 +261,7 @@ public class AdjacencyMatrix {
 	}
 
 	private void setValue(int from, int to, int val) {
-		long startBit = domainSize * CELL_SIZE * from + CELL_SIZE * to;
-
-		int startInt = (int) (startBit / 32);
-		int startIndex = (int) (startBit % 32);
-
-		boolean overflow = startIndex + CELL_SIZE > 32;
-		if (overflow) {
-			int leftOver = CELL_SIZE - 32 + startIndex;
-
-			// First clear the value
-			int maskFirst = (1 << startIndex) - 1;
-			int maskSecond = ~((1 << leftOver) - 1);
-
-			edges[startInt] &= maskFirst;
-			edges[startInt + 1] &= maskSecond;
-
-			// Write the value
-			maskFirst = (val << startIndex);
-			maskSecond = (val) >> (32 - startIndex);
-
-			edges[startInt] |= maskFirst;
-			edges[startInt + 1] |= maskSecond;
-
-		} else {
-			// first clear the value
-			int mask = (((1 << (32 - startIndex - CELL_SIZE)) - 1) << (startIndex + CELL_SIZE)) | ((1 << startIndex) - 1);
-			edges[startInt] &= mask;
-
-			// Write the value
-			mask = (val << startIndex);
-			edges[startInt] |= mask;
-		}
+		setValue(from,to, val, domainSize,edges);
 	}
 
 	/**
@@ -440,8 +410,53 @@ public class AdjacencyMatrix {
 		return ss.toString();
 	}
 
-	public int hashCode() {
-		return Hash.hashcode(edges);
+	public static void setValue(int from, int to, int val, int domainSize, int []vals) {
+		long startBit = domainSize * CELL_SIZE * from + CELL_SIZE * to;
+
+		int startInt = (int) (startBit / 32);
+		int startIndex = (int) (startBit % 32);
+
+		boolean overflow = startIndex + CELL_SIZE > 32;
+		if (overflow) {
+			int leftOver = CELL_SIZE - 32 + startIndex;
+
+			// First clear the value
+			int maskFirst = (1 << startIndex) - 1;
+			int maskSecond = ~((1 << leftOver) - 1);
+
+			vals[startInt] &= maskFirst;
+			vals[startInt + 1] &= maskSecond;
+
+			// Write the value
+			maskFirst = (val << startIndex);
+			maskSecond = (val) >> (32 - startIndex);
+
+			vals[startInt] |= maskFirst;
+			vals[startInt + 1] |= maskSecond;
+
+		} else {
+			// first clear the value
+			int mask = (((1 << (32 - startIndex - CELL_SIZE)) - 1) << (startIndex + CELL_SIZE)) | ((1 << startIndex) - 1);
+			vals[startInt] &= mask;
+
+			// Write the value
+			mask = (val << startIndex);
+			vals[startInt] |= mask;
+		}
+	}
+	
+	public int[] label(Label l){
+		int[] vals = new int[edges.length];
+		for(int i = 0 ; i < l.newDomain(); i++){
+			for(int j = 0 ; j< l.newDomain(); j++){
+				setValue(i,j,this.numEdges(l.oldName(i), l.oldName(j)),domainSize, vals);
+			}
+		}
+		return vals;
+	}
+	
+	public int hashCode(int[] l) {
+		return Hash.hashcode(l);
 	}
 
 	private class VertexIterable implements Iterable<Integer> {
