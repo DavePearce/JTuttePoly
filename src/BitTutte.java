@@ -61,6 +61,7 @@ public class BitTutte {
 		if (args.length == 1) {
 			t = new BitTutte(args[0]);
 			System.err.println(t.cache.statistics());
+			System.err.println("Steps: " + t.num_steps);
 		} else {
 			for (int i = 0; i < 100; i++) {
 				t = new BitTutte(null);
@@ -73,7 +74,7 @@ public class BitTutte {
 		num_steps = 0;
 		num_cycles = 0;
 		cache = new Cache();
-		edgeSelection = new HeuristicCollection(HeuristicCollection.VERTEX_ORDER);
+		edgeSelection = new HeuristicCollection(HeuristicCollection.MINIMISE_SDEGREE);
 
 		// Make a graph
 		int minVertex = 3;
@@ -135,10 +136,13 @@ public class BitTutte {
 				g.addEdge(from, to, num);
 			}
 		}
+		
+		
+		
+//		System.err.println(g.numEdges());
 		FactorPoly tutte = tutte(g, 1);
 
 		System.out.println(tutte.toString());
-
 		// BigInteger correct = new BigInteger("2").pow(numEdges);
 		// BigInteger tuttei = tutte.substitute(2, 2);
 		// if (!correct.equals(tuttei)) {
@@ -327,7 +331,7 @@ public class BitTutte {
 			}
 		}
 
-		if (graph.numVertices() >= smallGraphThreshold && !graph.isMultitree()) {
+		if (cacheEntry.numVertices() >= smallGraphThreshold && !cacheEntry.isMultitree()) {
 			cache.add(cacheEntry, poly);
 		}
 
