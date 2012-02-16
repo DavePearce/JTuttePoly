@@ -56,6 +56,9 @@ public class BitTutte {
 
 	EdgeSelection edgeSelection;
 
+	long totalWork;
+	long workDone;
+
 	public static void main(String[] args) {
 		BitTutte t;
 		if (args.length == 1) {
@@ -108,7 +111,7 @@ public class BitTutte {
 
 				}
 				g = new Graph(count);
-				g= orderVertices(g, l, numbers, V_MINIMISE_DEGREE);
+				g = orderVertices(g, l, numbers, V_MINIMISE_DEGREE);
 
 			} catch (FileNotFoundException e) {
 				e.printStackTrace();
@@ -136,12 +139,12 @@ public class BitTutte {
 				g.addEdge(from, to, num);
 			}
 		}
-		
-		
-		
-//		System.err.println(g.numEdges());
-		FactorPoly tutte = tutte(g, 1);
 
+		totalWork = pow(2, g.numEdges());
+		workDone = 0;
+		// System.err.println(g.numEdges());
+		FactorPoly tutte = tutte(g, 1);
+		System.out.println();
 		System.out.println(tutte.toString());
 		// BigInteger correct = new BigInteger("2").pow(numEdges);
 		// BigInteger tuttei = tutte.substitute(2, 2);
@@ -151,19 +154,33 @@ public class BitTutte {
 		// }
 
 	}
+	
+	private long pow(long a, long b){
+		if(b <0) {
+			 throw new RuntimeException("b < 0");
+		}
+		long t = 1;
+		for(int i = 0 ; i < b ;i++){
+			t*=a;
+		}
+		return t;
+	}
 
 	/**
-	 * Make the graph, but give the vertex labels some meaning
-	 * Both the graph g and Map numbers will be modified
+	 * Make the graph, but give the vertex labels some meaning Both the graph g and Map numbers will be modified
 	 * 
-	 * @param g The graph to populate
-	 * @param l List of edges
-	 * @param numbers Mapping of vertices to the smallest domain possible
-	 * @param vertexHeuristic ordering heuristic to use
-	 * @return Graph g with all the vertices added. 
+	 * @param g
+	 *            The graph to populate
+	 * @param l
+	 *            List of edges
+	 * @param numbers
+	 *            Mapping of vertices to the smallest domain possible
+	 * @param vertexHeuristic
+	 *            ordering heuristic to use
+	 * @return Graph g with all the vertices added.
 	 */
 	private Graph orderVertices(Graph g, List<Pair<Integer, Integer>> l, Map<Integer, Integer> numbers, int vertexHeuristic) {
-		//TODO UNTESTED
+		// TODO UNTESTED
 		List<Pair<Integer, Integer>> counts = new ArrayList<Pair<Integer, Integer>>();
 		for (Integer i : numbers.keySet()) {
 			counts.add(new Pair<Integer, Integer>(i, 0));
@@ -212,8 +229,8 @@ public class BitTutte {
 		default:
 			break;
 		}
-		
-		for(int i = 0; i < counts.size();i++){
+
+		for (int i = 0; i < counts.size(); i++) {
 			numbers.put(counts.get(i).first(), i);
 		}
 
@@ -226,16 +243,30 @@ public class BitTutte {
 
 	private FactorPoly tutte(Graph graph, int mid) {
 		num_steps++;
-
 		debug("Original Graph:\n");
 		debug(graph);
 		// === 1. APPLY SIMPLIFICATIONS ===
-		FactorPoly RF = new FactorPoly(new Y(reduce_loops(graph)));
-		// System.out.println("Removing all loops to get " + RF.toString());
 
+		int numY = reduce_loops(graph);
+		FactorPoly RF = new FactorPoly(new Y(numY));
+
+		{
+			if(numY > 0){
+				System.out.println("Reduced loops");
+			}
+			int numEdges = graph.numEdges();
+			workDone += numY;
+			for (int i = numEdges + numY - 1; i >= numEdges; i--) {
+//				System.out.println("Reduced loops counting");
+				workDone += pow(2, i)-1;
+			}
+		}
+		// System.out.println("Removing all loops to get " + RF.toString());
+		System.err.printf("\r%.2f%%", 100.0 * workDone / (double) totalWork);
 		if (graph.numVertices() >= smallGraphThreshold && !graph.isMultitree()) {
 			FactorPoly r = cache.get(graph);
 			if (r != null) {
+				workDone += pow(2, graph.numEdges()) -1;
 				debug("Cache Hit!!");
 				return r.timesnew(RF);
 			}
@@ -248,7 +279,16 @@ public class BitTutte {
 		if (reduce_multicycles && graph.isMulticycle()) {
 			debug("--- MultiCycle ---");
 			num_cycles++;
+
+			int numEdgesBefore = graph.numEdges();
+
 			poly = reduce_cycle(new FactorPoly(new X(1)), graph);
+
+			int numEdgesAfter = graph.numEdges();
+			workDone += numEdgesBefore - numEdgesAfter; 
+			for (int i = numEdgesBefore - 1; i >= numEdgesAfter; i--) {
+				workDone += pow(2, i)-1;
+			}
 
 			debug(poly);
 			// if(write_tree) { write_tree_leaf(mid,graph,cout); }
@@ -277,8 +317,17 @@ public class BitTutte {
 			if (biconnects.size() > 1) {
 				num_disbicomps++;
 			}
+
+			int numEdgesBefore = graph.numEdges();
+
 			poly = reduce_tree(new FactorPoly(new X(1)), graph);
 			debug(poly);
+
+			int numEdgesAfter = graph.numEdges();
+			workDone += numEdgesBefore - numEdgesAfter; 
+			for (int i = numEdgesBefore - 1; i >= numEdgesAfter; i--) {
+				workDone += pow(2, i)-1;
+			}
 
 			// now, actually do the computation
 			for (Graph i : biconnects) {
@@ -287,9 +336,19 @@ public class BitTutte {
 					debug("--- Is inner multicycle");
 					// this is actually a cycle!
 					num_cycles++;
+
+					numEdgesBefore = graph.numEdges();
+
 					poly.times(reduce_cycle(new FactorPoly(new X(1)), i));
+
+					numEdgesAfter = graph.numEdges();
+					workDone += numEdgesBefore - numEdgesAfter; 
+					for (int j = numEdgesBefore - 1; j >= numEdgesAfter; j--) {
+						workDone += pow(2, j)-1;
+					}
 					// if(write_tree) { write_tree_leaf(tid++,i,System.out); }
 				} else {
+					workDone++;
 					poly.times(tutte(i, tid++));
 				}
 			}
@@ -317,12 +376,21 @@ public class BitTutte {
 			// System.out.println(g2);
 
 			// recursively compute the polynomial, starting with delete
+			workDone+=1;
 			if (edge.third > 1) {
+				
+				int numEdges = graph.numEdges();
+				
+				workDone += edge.third; 
+				for (int j = numEdges+ edge.third - 1; j >= numEdges ; j--) {
+					workDone += pow(2, j)-1;
+				}
 				poly = tutte(graph, lid);
 				// System.out.println(poly);
 				FactorPoly pp = tutte(g2, rid);
 				// System.out.println(pp);
 				pp.times(new Y(0, edge.third - 1));
+				
 				poly.add(pp);
 			} else {
 				poly = tutte(graph, lid);
@@ -342,7 +410,7 @@ public class BitTutte {
 		// System.out.println(poly.toString().equals((new FactorPoly(poly)).toString()));
 		// throw new RuntimeException("Cached value was wrong!!!");
 		// }
-
+		System.err.printf("\r%.2f%%  %d %d", 100.0 * workDone / (double) totalWork, workDone, totalWork);
 		return poly.timesnew(RF);
 	}
 

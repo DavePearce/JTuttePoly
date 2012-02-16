@@ -12,8 +12,7 @@ import java.util.Set;
 import java.util.TreeSet;
 
 /**
- * Treats all graphs as simple (this is clearly not a problem, as it finds a
- * labelling)
+ * Treats all graphs as simple (this is clearly not a problem, as it finds a labelling)
  * 
  * @author roma
  * 
@@ -32,38 +31,43 @@ public class Isomorphism {
 		unitpart.add(cell);
 		alpha.add(cell);
 
-		List<Set<Integer>> partition = equitableRefinement(g, unitpart, alpha);
-//		 print(partition, null);
+		Triple<List<Set<Integer>>, int[], int[]> resultTriple = null;
+		List<Set<Integer>> partition = null;
+		try {
+			partition = equitableRefinement(g, unitpart, alpha);
+			// print(partition, null);
 
-		Triple<List<Set<Integer>>, int[], int[]> resultTriple = searchTree(g,
-				partition, null);
-
+			resultTriple = searchTree(g, partition, null);
+		} catch (Error e) {
+			System.out.println(g.numEdges());
+			System.out.println(partition);
+			System.out.println(resultTriple);
+			throw e;
+		}
 		// System.out.println();
-//		 print(resultTriple.first, resultTriple.second);
+		// print(resultTriple.first, resultTriple.second);
 		return resultTriple.third;
 	}
 
 	/**
 	 * Triple<Partition, value, edges>
+	 * 
 	 * @param g
 	 * @param partition
 	 * @param soFar
 	 * @return
 	 */
-	private static Triple<List<Set<Integer>>, int[], int[]> searchTree(Graph g,
-			List<Set<Integer>> partition,
+	private static Triple<List<Set<Integer>>, int[], int[]> searchTree(Graph g, List<Set<Integer>> partition,
 			Triple<List<Set<Integer>>, int[], int[]> soFar) {
 		if (discrete(partition)) {
-			int[] label = partitionToMatrix(partition, g.domainSize(),g);
-//			int[] label = partitionToLabel(partition, g.domainSize());
+			int[] label = partitionToMatrix(partition, g.domainSize(), g);
+			// int[] label = partitionToLabel(partition, g.domainSize());
 			if (soFar == null) {
-				return new Triple<List<Set<Integer>>, int[], int[]>(partition,
-						label, label);
+				return new Triple<List<Set<Integer>>, int[], int[]>(partition, label, label);
 			} else {
-//				int[] value = partitionToValue(partition, g, label);
+				// int[] value = partitionToValue(partition, g, label);
 				if (greaterThan(label, soFar.second)) {
-					return new Triple<List<Set<Integer>>, int[], int[]>(
-							partition, label, label);
+					return new Triple<List<Set<Integer>>, int[], int[]>(partition, label, label);
 				}
 				return soFar;
 			}
@@ -106,12 +110,12 @@ public class Isomorphism {
 			alpha.add(u);
 			newPartition = equitableRefinement(g, newPartition, alpha);
 
-//			 if (discrete(newPartition)) {
-//			 int[] value = partitionToMatrix(newPartition, g.domainSize(), g);
-//			 print(newPartition, value);
-//			 } else {
-//			 print(newPartition, null);
-//			 }
+			// if (discrete(newPartition)) {
+			// int[] value = partitionToMatrix(newPartition, g.domainSize(), g);
+			// print(newPartition, value);
+			// } else {
+			// print(newPartition, null);
+			// }
 
 			current = searchTree(g, newPartition, current);
 
@@ -139,8 +143,7 @@ public class Isomorphism {
 		return i < j;
 	}
 
-	private static List<Set<Integer>> equitableRefinement(Graph g,
-			List<Set<Integer>> partition, List<Set<Integer>> alpha) {
+	private static List<Set<Integer>> equitableRefinement(Graph g, List<Set<Integer>> partition, List<Set<Integer>> alpha) {
 
 		// McKay's Algorithm
 		int m = 0, M = 0;
@@ -292,18 +295,15 @@ public class Isomorphism {
 
 	}
 
-	private static Label partitionToLabel(List<Set<Integer>> partition,
-			int domain) {
+	private static Label partitionToLabel(List<Set<Integer>> partition, int domain) {
 		Label l = new Label(partition.size(), domain);
 		for (int i = 0; i < partition.size(); i++) {
 			l.set(partition.get(i).iterator().next(), i);
 		}
 		return l;
 	}
-	
-	
-	private static int[] partitionToMatrix(List<Set<Integer>> partition,
-			int domain, Graph g) {
+
+	private static int[] partitionToMatrix(List<Set<Integer>> partition, int domain, Graph g) {
 		Label l = new Label(partition.size(), domain);
 		for (int i = 0; i < partition.size(); i++) {
 			l.set(partition.get(i).iterator().next(), i);
@@ -328,8 +328,7 @@ public class Isomorphism {
 
 			List<Pair<Integer, Integer>> edges = new ArrayList<Pair<Integer, Integer>>();
 			for (int i = 0; i < numEdges; i++) {
-				edges.add(new Pair<Integer, Integer>(r.nextInt(numVertices), r
-						.nextInt(numVertices)));
+				edges.add(new Pair<Integer, Integer>(r.nextInt(numVertices), r.nextInt(numVertices)));
 			}
 
 			Graph g = new Graph(numVertices);
@@ -340,7 +339,7 @@ public class Isomorphism {
 			for (int i = 0; i < 10; i++) {
 
 				if (System.currentTimeMillis() - start > 4 * 60000) {
-					System.out.println(time/(double)count);
+					System.out.println(time / (double) count);
 					return;
 				}
 				Graph g2 = new Graph(numVertices);
@@ -364,7 +363,7 @@ public class Isomorphism {
 				long start1 = System.currentTimeMillis();
 				if (!g.equals(g2) || !g2.equals(g) || g.hashCode() != g2.hashCode()) {
 					System.out.println("FAIL");
-					System.out.println("Equality Failed: " +(!g.equals(g2) || !g2.equals(g)));
+					System.out.println("Equality Failed: " + (!g.equals(g2) || !g2.equals(g)));
 					System.out.println("Hashcode Failed: " + (g.hashCode() != g2.hashCode()));
 					System.out.println("Seed: " + seed + "L");
 					System.out.println("Iteration: " + i);
@@ -374,7 +373,7 @@ public class Isomorphism {
 					return;
 				}
 				long end = System.currentTimeMillis();
-				time += end -start1;
+				time += end - start1;
 				count++;
 			}
 		}
