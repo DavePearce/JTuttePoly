@@ -11,7 +11,7 @@ import polynomial.FactorPoly;
 public class Cache {
 	private Map<Graph, FactorPoly> data;
 	private static final long MIN_MEM = 50 * 1024 * 1024;
-	private double delete_prop;
+	private double delete_prop = 0.5;
 	private long acesses = 0;
 	private long misses = 0;
 
