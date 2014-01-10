@@ -110,6 +110,7 @@ public class BitTutte {
 					}
 
 				}
+				scan.close();
 				g = new Graph(count);
 				g = orderVertices(g, l, numbers, V_MINIMISE_DEGREE);
 
@@ -224,6 +225,7 @@ public class BitTutte {
 			Collections.sort(counts, new Pair.MaximizeSecondComparator());
 			break;
 		case V_BFS:
+			System.out.println("BFS vertex order is unimplemented, falling back to none");
 		case V_NONE:
 			// just do nothing
 		default:
